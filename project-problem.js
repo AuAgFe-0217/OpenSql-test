@@ -12,15 +12,15 @@
   'use strict';
 
   /* ================= 1. 코어 ================= */
-  const T = { basic: 'SELECT 기초', cond: '조건과 범위', agg: '집계와 그룹', join: 'JOIN과 서브쿼리', syn: 'ABAP 7.4 문법', types: 'ABAP 자료형과 내부 테이블', res: '결과 처리', perf: '성능과 코드 리뷰' };
+  const T = { basic: 'SELECT 기초', cond: '조건과 범위', agg: '집계와 그룹', join: 'JOIN과 서브쿼리', syn: 'ABAP 7.4 문법', res: '결과 처리', perf: '성능과 코드 리뷰' };
 
   const SCHEMA = {
-    SCARR: { key: ['MANDT', 'CARRID'], group: [], f: { MANDT: 'id', CARRID: 'id', CARRNAME: 'text', CURRCODE: 'cur', URL: 'text' } },
-    SPFLI: { key: ['MANDT', 'CARRID', 'CONNID'], group: ['COUNTRYFR', 'CITYFROM', 'COUNTRYTO', 'DISTID'], f: { MANDT: 'id', CARRID: 'id', CONNID: 'id', COUNTRYFR: 'id', CITYFROM: 'text', AIRPFROM: 'id', COUNTRYTO: 'id', CITYTO: 'text', AIRPTO: 'id', FLTIME: 'num', DEPTIME: 'time', ARRTIME: 'time', DISTANCE: 'num', DISTID: 'id', FLTYPE: 'flag', PERIOD: 'num' } },
-    SFLIGHT: { key: ['MANDT', 'CARRID', 'CONNID', 'FLDATE'], group: ['CARRID', 'PLANETYPE', 'CURRENCY', 'CONNID'], f: { MANDT: 'id', CARRID: 'id', CONNID: 'id', FLDATE: 'date', PRICE: 'num', CURRENCY: 'cur', PLANETYPE: 'id', SEATSMAX: 'num', SEATSOCC: 'num', PAYMENTSUM: 'num', SEATSMAX_B: 'num', SEATSOCC_B: 'num', SEATSMAX_F: 'num', SEATSOCC_F: 'num' } },
-    SBOOK: { key: ['MANDT', 'CARRID', 'CONNID', 'FLDATE', 'BOOKID'], group: ['CARRID', 'CLASS', 'CUSTTYPE', 'FORCURKEY'], f: { MANDT: 'id', CARRID: 'id', CONNID: 'id', FLDATE: 'date', BOOKID: 'id', CUSTOMID: 'id', CUSTTYPE: 'id', SMOKER: 'flag', LUGGWEIGHT: 'num', WUNIT: 'id', INVOICE: 'flag', CLASS: 'id', FORCURAM: 'num', FORCURKEY: 'cur', LOCCURAM: 'num', LOCCURKEY: 'cur', ORDER_DATE: 'date', COUNTER: 'id', AGENCYNUM: 'id', CANCELLED: 'flag', RESERVED: 'flag', PASSNAME: 'text', PASSFORM: 'text', PASSBIRTH: 'date' } }
+    SCARR: { key: ['CARRID'], group: [], f: { CARRID: 'id', CARRNAME: 'text', CURRCODE: 'cur', URL: 'text' } },
+    SPFLI: { key: ['CARRID', 'CONNID'], group: ['COUNTRYFR', 'CITYFROM', 'COUNTRYTO', 'DISTID'], f: { CARRID: 'id', CONNID: 'id', COUNTRYFR: 'id', CITYFROM: 'text', AIRPFROM: 'id', COUNTRYTO: 'id', CITYTO: 'text', AIRPTO: 'id', FLTIME: 'num', DEPTIME: 'time', ARRTIME: 'time', DISTANCE: 'num', DISTID: 'id', FLTYPE: 'flag', PERIOD: 'num' } },
+    SFLIGHT: { key: ['CARRID', 'CONNID', 'FLDATE'], group: ['CARRID', 'PLANETYPE', 'CURRENCY', 'CONNID'], f: { CARRID: 'id', CONNID: 'id', FLDATE: 'date', PRICE: 'num', CURRENCY: 'cur', PLANETYPE: 'id', SEATSMAX: 'num', SEATSOCC: 'num', PAYMENTSUM: 'num', SEATSMAX_B: 'num', SEATSOCC_B: 'num', SEATSMAX_F: 'num', SEATSOCC_F: 'num' } },
+    SBOOK: { key: ['CARRID', 'CONNID', 'FLDATE', 'BOOKID'], group: ['CARRID', 'CLASS', 'CUSTTYPE', 'FORCURKEY'], f: { CARRID: 'id', CONNID: 'id', FLDATE: 'date', BOOKID: 'id', CUSTOMID: 'id', CUSTTYPE: 'id', SMOKER: 'flag', LUGGWEIGHT: 'num', WUNIT: 'id', INVOICE: 'flag', CLASS: 'id', FORCURAM: 'num', FORCURKEY: 'cur', LOCCURAM: 'num', LOCCURKEY: 'cur', ORDER_DATE: 'date', CANCELLED: 'flag', PASSNAME: 'text' } }
   };
-  const LABEL = { MANDT: '클라이언트', CARRID: '항공사 코드', CONNID: '항공편 번호', FLDATE: '운항 날짜', PRICE: '운임', CURRENCY: '통화', PLANETYPE: '기종', SEATSMAX: '최대 좌석', SEATSOCC: '예약 좌석', PAYMENTSUM: '결제 합계', SEATSMAX_B: '비즈니스석 최대 좌석', SEATSOCC_B: '비즈니스석 예약 좌석', SEATSMAX_F: '일등석 최대 좌석', SEATSOCC_F: '일등석 예약 좌석', CITYFROM: '출발 도시', CITYTO: '도착 도시', AIRPFROM: '출발 공항', AIRPTO: '도착 공항', DISTANCE: '거리', DISTID: '거리 단위', FLTIME: '비행 시간', DEPTIME: '출발 시각', ARRTIME: '도착 시각', COUNTRYFR: '출발 국가', COUNTRYTO: '도착 국가', CARRNAME: '항공사 이름', CURRCODE: '통화 코드', URL: '웹사이트', BOOKID: '예약 번호', CUSTOMID: '고객 번호', CUSTTYPE: '고객 유형', CLASS: '좌석 등급', FORCURAM: '외화 금액', LOCCURAM: '현지 통화 금액', FORCURKEY: '외화 통화', LOCCURKEY: '항공사 현지 통화', ORDER_DATE: '예약 일자', COUNTER: '판매 카운터 번호', AGENCYNUM: '여행사 번호', CANCELLED: '취소 여부', RESERVED: '예약 여부', SMOKER: '흡연 여부', PASSNAME: '탑승자 이름', PASSFORM: '호칭', PASSBIRTH: '탑승자 생년월일', LUGGWEIGHT: '수하물 무게', WUNIT: '무게 단위', FLTYPE: '전세기 여부', PERIOD: '도착 추가 일수', INVOICE: '청구서 발행 여부' };
+  const LABEL = { CARRID: '항공사 코드', CONNID: '항공편 번호', FLDATE: '운항 날짜', PRICE: '운임', CURRENCY: '통화', PLANETYPE: '기종', SEATSMAX: '최대 좌석', SEATSOCC: '예약 좌석', PAYMENTSUM: '결제 합계', CITYFROM: '출발 도시', CITYTO: '도착 도시', DISTANCE: '거리', FLTIME: '비행 시간', COUNTRYFR: '출발 국가', COUNTRYTO: '도착 국가', CARRNAME: '항공사 이름', CURRCODE: '통화 코드', BOOKID: '예약 번호', CUSTOMID: '고객 번호', CUSTTYPE: '고객 유형', CLASS: '좌석 등급', FORCURAM: '외화 금액', LOCCURAM: '현지 통화 금액', ORDER_DATE: '예약 일자', CANCELLED: '취소 여부', SMOKER: '흡연 여부', PASSNAME: '탑승자 이름', LUGGWEIGHT: '수하물 무게', FLTYPE: '전세기 여부', INVOICE: '청구서 발행 여부' };
   const ALIAS = { CARRID: 'AIRLINE', CONNID: 'FLIGHT_NO', FLDATE: 'FLIGHT_DATE', PRICE: 'TICKET_PRICE', CITYFROM: 'ORIGIN', CITYTO: 'DESTINATION', CARRNAME: 'AIRLINE_NAME', SEATSMAX: 'SEATS_TOTAL', SEATSOCC: 'SEATS_TAKEN', DISTANCE: 'DIST', CLASS: 'CABIN', BOOKID: 'BOOKING_NO', CUSTOMID: 'CUSTOMER', FORCURAM: 'FOREIGN_AMT', CURRENCY: 'CURR', PLANETYPE: 'PLANE' };
   const TA = { SCARR: 'C', SPFLI: 'P', SFLIGHT: 'F', SBOOK: 'B' };
   const L = f => (LABEL[f] ? LABEL[f] + '(' + f + ')' : f);
@@ -29,21 +29,6 @@
   const rxEsc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const uniq = a => [...new Set(a)];
   const DB = () => window.OPEN_SQL_DATA || {};
-  const ABAP_NAME = /^(?:P|S|LV|LT|LS|GT|GS|GV|IV|EV|CV|CS|IS|ES|ET|IT|WA|LO|MO)_[A-Z0-9_]+$/i;
-  const projectFields = project => {
-    const declared = new Set([...(project.conditionVars || []), ...((String(project.source || '').toUpperCase().match(/\b(?:P|S|LV|LT|LS|GT|GS|GV|IV|EV|CV|CS|IS|ES|ET|IT|WA|LO|MO)_[A-Z0-9_]+\b/g)) || [])].map(x => String(x).replace(/^@/, '').toUpperCase()));
-    return (project.fields || []).map(x => String(x).toUpperCase()).filter(x => !ABAP_NAME.test(x) && !declared.has(x));
-  };
-  const validSourceQuery = (project, sql) => {
-    const tables = [...sql.matchAll(/\b(?:FROM|JOIN)\s+([A-Z][A-Z0-9_]*)/gi)].map(m => m[1].toUpperCase());
-    const known = new Set(tables.flatMap(t => SCHEMA[t] ? Object.keys(SCHEMA[t].f) : []));
-    if (!known.size) projectFields(project).forEach(f => known.add(f));
-    const list = (sql.match(/^\s*SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?([\s\S]*?)\s+FROM\b/i) || [])[1] || '';
-    if (!list.trim() || list.trim() === '*') return !!known.size;
-    const stripped = list.replace(/\bAS\s+[A-Z][A-Z0-9_]*\b/gi, ' ').replace(/\b(?:COUNT|SUM|AVG|MIN|MAX|DISTINCT|CASE|WHEN|THEN|ELSE|END|CAST|DEC|FLTP)\b/gi, ' ');
-    const fields = [...stripped.matchAll(/(?:[A-Z][A-Z0-9_]*~)?([A-Z][A-Z0-9_]*)/gi)].map(m => m[1].toUpperCase());
-    return fields.length > 0 && fields.every(f => known.has(f));
-  };
   const kindOf = (t, f) => (SCHEMA[t] && SCHEMA[t].f[f]) || (/PRICE|AMOUNT|AM$|SEATS|DISTANCE|TIME|COUNT|QUANT|QTY|MENGE|BETRG|WEIGHT|SUM/i.test(f) ? 'num' : /DATE|DAT$/i.test(f) ? 'date' : 'text');
   const colVals = (t, f) => uniq((DB()[t] || []).map(r => r[f]).filter(v => v !== undefined && v !== null && v !== ''));
   const quant = (t, f, p) => { const v = (DB()[t] || []).map(r => Number(r[f])).filter(Number.isFinite).sort((a, b) => a - b); return v.length ? v[Math.min(v.length - 1, Math.floor(v.length * p))] : 0; };
@@ -111,19 +96,14 @@
   ].filter(Boolean).join('\n') + '.';
 
   function ctxOf(project, seed) {
-    let table = String(project.primaryTable || (project.tables || [])[0] || 'SFLIGHT').toUpperCase();
-    let info = SCHEMA[table] || null;
-    let fields = info ? Object.keys(info.f) : projectFields(project);
-    let usedFallback = false;
-    if (!fields.length) {
-      if (info) fields = Object.keys(info.f);
-      else { table = 'SFLIGHT'; info = SCHEMA.SFLIGHT; fields = Object.keys(info.f); usedFallback = true; }
-    }
+    const table = String(project.primaryTable || (project.tables || [])[0] || 'SFLIGHT').toUpperCase();
+    const info = SCHEMA[table] || null;
+    const fields = (project.fields && project.fields.length ? project.fields : (info ? Object.keys(info.f).slice(0, 6) : ['CARRID', 'CONNID'])).map(x => String(x).toUpperCase());
     const r = rng(seed);
     const offset = parseInt(String(seed).slice(0, 2), 16) % fields.length;
     const pick = (start, count = 1) => Array.from({ length: Math.min(count, fields.length) }, (_, i) => fields[(start + i) % fields.length]);
     const kindFields = k => { const own = fields.filter(f => kindOf(table, f) === k); return own.length ? own : (info ? Object.keys(info.f).filter(f => info.f[f] === k) : []); };
-    const c = { project, seed, r, table, info, fields, offset, pick, kindFields, rv: String(project.resultVar || 'GT_DATA').toUpperCase(), focused: pick(offset, Math.min(2, fields.length)), keyField: fields[offset], where: usedFallback ? '' : getWhere(project.source), cvars: usedFallback ? [] : (project.conditionVars || []) };
+    const c = { project, seed, r, table, info, fields, offset, pick, kindFields, rv: String(project.resultVar || 'GT_DATA').toUpperCase(), focused: pick(offset, Math.min(2, fields.length)), keyField: fields[offset], where: getWhere(project.source), cvars: project.conditionVars || [] };
     c.num = kindFields('num')[0];
     const gcand = info ? uniq([...fields.filter(f => info.group.includes(f)), ...info.group]) : [];
     c.gf = gcand.length ? gcand[offset % gcand.length] : c.keyField;
@@ -142,30 +122,39 @@
     let ref = null;
     if (spec.expects != null) {
       const want = String(spec.expects);
+      if (spec.snippet) ref = run(spec.snippet);
       checks.push(['결과 값이 ' + (spec.expectsLabel || '기대 값') + '과 일치', code => new RegExp('(^|[^0-9A-Za-z.])' + rxEsc(want) + '($|[^0-9A-Za-z])', 'i').test(String(code)), true]);
-    } else if (spec.semantic !== false && !/\b(?:JOIN|EXISTS|UNION|INTERSECT|EXCEPT|CASE|OFFSET)\b|\bFOR ALL ENTRIES\b|\bORDER BY PRIMARY KEY\b|\(\s*SELECT\b/i.test(spec.answer)) {
+    } else if (spec.semantic !== false) {
       ref = run(spec.answer);
       if (ref.ok) checks.push(['가상 실행 결과가 기대 결과와 일치', code => { const g = run(code); return g.ok && sameRows(ref.rows, g.rows, !!spec.ordered); }, true]);
     }
-    const flat = spec.answer.replace(/\s+/g, ' ');
+    const flat = String(spec.answer || '').replace(/\s+/g, ' ');
+    const answerFields = (spec.cols || []).join(', ') || '문제에서 요청한 열';
+    const keyClause = String(spec.answer || '').split('\n').map(line => line.trim()).find(line => /^(?:WHERE|INNER JOIN|LEFT OUTER JOIN|GROUP BY|HAVING|ORDER BY|UP TO)\b/i.test(line)) || '추가 조건이 없다면 FROM 뒤에 INTO TABLE을 배치합니다.';
     return {
       topic: d.topic, level: spec.level || d.level, kind: d.kind, title: c.project.name + ' · ' + spec.name,
       table: spec.table || c.table, cols: spec.cols || [], schemaText: spec.schemaText || '',
-      hints: [spec.h1 || '요구사항을 SELECT → FROM → WHERE → 그룹/정렬 → INTO 순서로 한 절씩 옮겨 보세요.', spec.h2 || 'DB 열에는 @를 붙이지 않고 ABAP 변수에만 @를 붙입니다. 쉼표로 열을 구분하세요.', spec.expects != null ? '정답: ' + spec.expects : '정답 구조: ' + flat],
+      hints: [
+        `1단계: ${c.table}에서 ${answerFields}를 조회하는 SELECT 열 목록을 만드세요. 결과는 내부 테이블 @${c.rv}에 담습니다.`,
+        `2단계: 이번 문제의 핵심 절은 다음과 같습니다: ${keyClause} DB 열에는 @를 붙이지 않고 ABAP 호스트 변수에만 @를 붙이세요.${spec.h1 ? ' 참고: ' + spec.h1 : ''}${spec.h2 ? ' ' + spec.h2 : ''}`,
+        spec.expects != null ? `3단계: 기대 값은 ${spec.expects}입니다. 조건을 조정해 가상 실행 결과와 맞춰 보세요.` : `3단계: 완성된 Open SQL SELECT 예시입니다.\n${flat}`
+      ],
       answer: spec.expects != null ? spec.expects + '\n\n' + (spec.snippet || '') : spec.answer,
       criteria: checks.map(x => x[0]),
       check: code => { const p = canon(code); return checks.map(([, fn, raw]) => { try { return !!fn(raw ? code : p); } catch (e) { return false; } }); },
-      req: spec.req, snippet: spec.snippet || '', preview: spec.preview || null, note: spec.note || '', bindings, expects: spec.expects != null ? String(spec.expects) : null,
-      submissionType: spec.submissionType || 'sql', run: () => (spec.submissionType === 'abap' ? [] : ref && ref.ok ? ref.rows : [{ 안내: '이 문제는 가상 실행 결과를 제공하지 않습니다.' }]),
+      plain: !!spec.plain, req: spec.req, snippet: spec.snippet || '', preview: spec.preview || null, note: spec.note || '', bindings, expects: spec.expects != null ? String(spec.expects) : null,
+      run: () => (ref && ref.ok ? ref.rows : [{ 안내: '이 문제는 가상 실행 결과를 제공하지 않습니다.' }]),
       projectId: c.project.id, resultVar: c.rv, sourceContext: c.project.source || '', variant,
       id: 'SQL-' + String(c.seed).slice(0, 6).toUpperCase(), seed: c.seed, created: new Date().toISOString(), params: {}, hintLevel: 0
     };
   }
-/* ================= 2. 카탈로그 ================= */
+
+  /* ================= 2. 카탈로그 ================= */
   const okInfo = c => !!c.info;
   const intoT = c => 'TABLE @' + c.rv;
   const NUM = { SFLIGHT: 'PRICE', SPFLI: 'DISTANCE', SBOOK: 'FORCURAM' };
   const DISP = { SFLIGHT: ['CARRID', 'CONNID', 'FLDATE', 'PRICE'], SPFLI: ['CARRID', 'CONNID', 'CITYFROM', 'DISTANCE'], SBOOK: ['BOOKID', 'PASSNAME', 'FORCURAM'] };
+  const minCnt = (c, f) => { const rows = DB()[c.table]; if (!rows) return 2; const m = {}; rows.forEach(r => { m[r[f]] = (m[r[f]] || 0) + 1; }); return Math.min(2, Math.max(1, ...Object.values(m))); };
   const baseChecks = (c, cols, extra = []) => [K.sel, K.from(c.table), K.cols(cols), ...extra, K.intoTable(c.rv)];
   const anyCol = f => '(?:\\w+~)?' + f + '(?![A-Z0-9_])';
 
@@ -280,13 +269,13 @@
   def('count_distinct', T.agg, '고급', '작성', null, c => ({ name: '고유 값 개수 세기', cols: [c.gf], req: `${c.table}에서 서로 다른 ${c.gf} 값의 개수를 COUNT DISTINCT로 구해 @LV_COUNT에 받으세요.`, answer: `SELECT COUNT( DISTINCT ${c.gf} )\n  FROM ${c.table}\n  INTO @LV_COUNT.`, checks: [K.sel, K.from(c.table), K.re(`COUNT( DISTINCT ${c.gf} )`, new RegExp('\\bCOUNT \\( DISTINCT ' + anyCol(c.gf) + ' \\)')), K.intoVar('LV_COUNT')] }));
 
   def('count_where', T.agg, '중급', '작성', okInfo, c => {
-    const f = c.info.group[0], v = String(dv(c, c.table, f, 'AA'));
+    const f = c.gf, v = String(dv(c, c.table, f, 'AA'));
     return { name: '조건에 맞는 행 개수 세기', cols: [f], req: `${c.table}에서 ${f}가 '${v}'인 행이 몇 건인지 집계해 @LV_COUNT에 받으세요. 행 전체를 읽어 오지 마세요.`, answer: `SELECT COUNT( * )\n  FROM ${c.table}\n  WHERE ${f} = '${v}'\n  INTO @LV_COUNT.`, checks: [K.sel, K.from(c.table), K.fn('COUNT', '*'), K.re(`WHERE ${f} = '${v}'`, new RegExp(anyCol(f) + ` = '${v.toUpperCase()}'`)), K.intoVar('LV_COUNT')] };
   });
 
   def('group_count', T.agg, '중급', '작성', null, c => { const cols = [c.gf, 'COUNT( * ) AS ROW_COUNT']; return { name: 'GROUP BY별 건수 집계', cols, req: `${c.table}에서 ${c.gf}별 행 개수를 세어 ${c.gf}와 ROW_COUNT를 @${c.rv}에 저장하세요.`, answer: fmt({ cols, from: c.table, group: c.gf, into: intoT(c) }), checks: baseChecks(c, [c.gf], [K.re('COUNT( * ) AS ROW_COUNT', /\bCOUNT \( \* \) AS ROW_COUNT\b/), K.re(`GROUP BY ${c.gf}`, new RegExp('\\bGROUP BY ' + anyCol(c.gf)))]) }; });
 
-  def('group_having', T.agg, '고급', '작성', null, c => { const cols = [c.gf, 'COUNT( * ) AS ROW_COUNT']; return { name: 'HAVING으로 그룹 걸러내기', cols, bindings: { LV_MIN_COUNT: 2 }, req: `${c.table}에서 ${c.gf}별로 그룹화하고, 그룹 건수가 @LV_MIN_COUNT 이상인 그룹만 남기세요.`, answer: fmt({ cols, from: c.table, group: c.gf, having: 'COUNT( * ) >= @LV_MIN_COUNT', into: intoT(c) }), note: '행을 거르는 조건은 WHERE, 그룹 결과(집계값)를 거르는 조건은 HAVING에 둡니다.', checks: baseChecks(c, [c.gf], [K.re(`GROUP BY ${c.gf}`, new RegExp('\\bGROUP BY ' + anyCol(c.gf))), K.re('HAVING COUNT( * ) >= @LV_MIN_COUNT', /\bHAVING COUNT \( \* \) >= @LV_MIN_COUNT\b/)]) }; });
+  def('group_having', T.agg, '고급', '작성', null, c => { const cols = [c.gf, 'COUNT( * ) AS ROW_COUNT']; return { name: 'HAVING으로 그룹 걸러내기', cols, bindings: { LV_MIN_COUNT: minCnt(c, c.gf) }, req: `${c.table}에서 ${c.gf}별로 그룹화하고, 그룹 건수가 @LV_MIN_COUNT 이상인 그룹만 남기세요.`, answer: fmt({ cols, from: c.table, group: c.gf, having: 'COUNT( * ) >= @LV_MIN_COUNT', into: intoT(c) }), note: '행을 거르는 조건은 WHERE, 그룹 결과(집계값)를 거르는 조건은 HAVING에 둡니다.', checks: baseChecks(c, [c.gf], [K.re(`GROUP BY ${c.gf}`, new RegExp('\\bGROUP BY ' + anyCol(c.gf))), K.re('HAVING COUNT( * ) >= @LV_MIN_COUNT', /\bHAVING COUNT \( \* \) >= @LV_MIN_COUNT\b/)]) }; });
 
   [['min', 'MIN'], ['max', 'MAX'], ['sum', 'SUM'], ['avg', 'AVG']].forEach(([k, fn]) => def('aggregate_' + k, T.agg, '중급', '작성', c => !!c.num, c => ({ name: `${fn} 집계`, cols: [c.num], req: `${c.table}에서 ${c.num}의 ${fn} 값을 계산해 @LV_${fn}에 받으세요.`, answer: `SELECT ${fn}( ${c.num} )\n  FROM ${c.table}\n  INTO @LV_${fn}.`, checks: [K.sel, K.from(c.table), K.fn(fn, c.num), K.intoVar('LV_' + fn)] })));
 
@@ -299,7 +288,7 @@
 
   def('group_where_having', T.agg, '고급', '작성', c => c.info && c.info.group.length > 0 && !!c.num, c => {
     const n = c.num, cols = [c.gf, `SUM( ${n} ) AS TOTAL_VALUE`];
-    return { name: 'WHERE → GROUP BY → HAVING', cols, bindings: { LV_MIN: quant(c.table, n, 0.2), LV_MIN_COUNT: 2 }, req: `${c.table}에서 ${n}이 @LV_MIN 이상인 행만 대상으로 ${c.gf}별 ${n} 합계(TOTAL_VALUE)를 구하고, 그룹 건수가 @LV_MIN_COUNT 이상인 그룹만 @${c.rv}에 저장하세요.`, answer: fmt({ cols, from: c.table, where: `${n} >= @LV_MIN`, group: c.gf, having: 'COUNT( * ) >= @LV_MIN_COUNT', into: intoT(c) }), note: 'WHERE는 그룹을 만들기 전에 행을, HAVING은 그룹을 만든 뒤 집계 결과를 거릅니다.', checks: baseChecks(c, [c.gf], [K.fn('SUM', n), K.re(`WHERE ${n} >= @LV_MIN`, new RegExp('\\bWHERE ' + anyCol(n) + ' >= @LV_MIN')), K.re('HAVING COUNT( * ) >= @LV_MIN_COUNT', /\bHAVING COUNT \( \* \) >= @LV_MIN_COUNT\b/), K.re('절 순서: WHERE → GROUP BY → HAVING', /\bWHERE\b.*\bGROUP BY\b.*\bHAVING\b/)]) };
+    return { name: 'WHERE → GROUP BY → HAVING', cols, bindings: { LV_MIN: quant(c.table, n, 0.2), LV_MIN_COUNT: minCnt(c, c.gf) }, req: `${c.table}에서 ${n}이 @LV_MIN 이상인 행만 대상으로 ${c.gf}별 ${n} 합계(TOTAL_VALUE)를 구하고, 그룹 건수가 @LV_MIN_COUNT 이상인 그룹만 @${c.rv}에 저장하세요.`, answer: fmt({ cols, from: c.table, where: `${n} >= @LV_MIN`, group: c.gf, having: 'COUNT( * ) >= @LV_MIN_COUNT', into: intoT(c) }), note: 'WHERE는 그룹을 만들기 전에 행을, HAVING은 그룹을 만든 뒤 집계 결과를 거릅니다.', checks: baseChecks(c, [c.gf], [K.fn('SUM', n), K.re(`WHERE ${n} >= @LV_MIN`, new RegExp('\\bWHERE ' + anyCol(n) + ' >= @LV_MIN')), K.re('HAVING COUNT( * ) >= @LV_MIN_COUNT', /\bHAVING COUNT \( \* \) >= @LV_MIN_COUNT\b/), K.re('절 순서: WHERE → GROUP BY → HAVING', /\bWHERE\b.*\bGROUP BY\b.*\bHAVING\b/)]) };
   });
 
   def('topn_group', T.agg, '고급', '작성', c => c.info && c.info.group.length > 0 && !!c.num, c => {
@@ -375,7 +364,7 @@
   });
 
   def('join_three', T.join, '고급', '작성', okInfo, c => {
-    const useB = c.table === 'SBOOK' || (c.table !== 'SCARR' && c.r.next() < 0.4), lv = dv(c, useB ? 'SFLIGHT' : 'SPFLI', 'CARRID', 'LH');
+    const useB = c.table === 'SBOOK' || (c.table !== 'SCARR' && c.r.next() < 0.4), lv = dv(c, useB ? 'SBOOK' : 'SFLIGHT', 'CARRID', 'LH');
     const s = useB
       ? { cols: ['P~CITYFROM', 'P~CITYTO', 'F~FLDATE', 'B~BOOKID', 'B~PASSNAME'], from: 'SPFLI AS P', joins: ['INNER JOIN SFLIGHT AS F\n    ON F~CARRID = P~CARRID\n   AND F~CONNID = P~CONNID', 'INNER JOIN SBOOK AS B\n    ON B~CARRID = F~CARRID\n   AND B~CONNID = F~CONNID\n   AND B~FLDATE = F~FLDATE'], where: 'P~CARRID = @LV_CARRID', tables: ['SPFLI', 'SFLIGHT', 'SBOOK'], keys: ['CARRID', 'CONNID', 'FLDATE'], schemaText: 'SPFLI AS P: CARRID, CONNID, CITYFROM, CITYTO · SFLIGHT AS F: CARRID, CONNID, FLDATE · SBOOK AS B: CARRID, CONNID, FLDATE, BOOKID, PASSNAME', w: 'P~CARRID' }
       : { cols: ['C~CARRNAME', 'P~CITYFROM', 'P~CITYTO', 'F~FLDATE', 'F~PRICE'], from: 'SCARR AS C', joins: ['INNER JOIN SPFLI AS P\n    ON P~CARRID = C~CARRID', 'INNER JOIN SFLIGHT AS F\n    ON F~CARRID = P~CARRID\n   AND F~CONNID = P~CONNID'], where: 'C~CARRID = @LV_CARRID', tables: ['SCARR', 'SPFLI', 'SFLIGHT'], keys: ['CARRID', 'CONNID'], schemaText: 'SCARR AS C: CARRID, CARRNAME · SPFLI AS P: CARRID, CONNID, CITYFROM, CITYTO · SFLIGHT AS F: CARRID, CONNID, FLDATE, PRICE', w: 'C~CARRID' };
@@ -425,7 +414,7 @@
 
   def('endselect', T.res, '중급', '작성', null, c => { const [a, b] = c.focused.length > 1 ? c.focused : [c.focused[0], c.focused[0]]; return { name: 'SELECT ... ENDSELECT 루프', cols: c.focused, semantic: false, req: `${c.table}에서 ${c.focused.join(', ')}를 한 행씩 @DATA(LS_ROW)에 받아 WRITE로 출력하는 SELECT ... ENDSELECT 루프를 작성하세요.`, answer: `SELECT ${c.focused.join(', ')}\n  FROM ${c.table}\n  INTO @DATA(LS_ROW).\n  WRITE: / LS_ROW-${a}, LS_ROW-${b}.\nENDSELECT.`, note: 'ENDSELECT 루프는 한 행씩 DB를 가져오므로 건수가 많으면 INTO TABLE 후 LOOP가 더 효율적입니다.', checks: [K.sel, K.from(c.table), K.cols(c.focused), K.re('INTO @DATA( 구조 )로 한 행씩 받기', /\bINTO @DATA \( \w+ \)/), K.re('ENDSELECT로 루프 종료', /\bENDSELECT\b/), K.no('INTO TABLE은 쓰지 않음', /\bINTO (?:CORRESPONDING FIELDS OF )?TABLE\b/)] }; });
 
-  def('loop_result', T.res, '기초', '작성', null, c => { const [a, b] = c.focused.length > 1 ? c.focused : [c.focused[0], c.focused[0]]; return { name: '조회 결과 LOOP로 출력하기', cols: c.focused, semantic: false, snippet: fmt({ cols: c.focused, from: c.table, into: intoT(c) }), req: `위 SELECT로 @${c.rv}에 채워진 결과를 LOOP AT으로 한 행씩 읽어 ${a}, ${b}를 WRITE하세요. 필드 심볼(ASSIGNING FIELD-SYMBOL) 또는 INTO DATA(...)를 사용합니다.`, answer: `LOOP AT ${c.rv} ASSIGNING FIELD-SYMBOL(<LS_ROW>).\n  WRITE: / <LS_ROW>-${a}, <LS_ROW>-${b}.\nENDLOOP.`, note: 'ASSIGNING FIELD-SYMBOL은 행을 복사하지 않아 INTO보다 효율적이고, 값을 바꾸면 내부 테이블에도 반영됩니다.', checks: [K.re(`LOOP AT ${c.rv}`, new RegExp('\\bLOOP AT ' + c.rv + '\\b')), K.re('ASSIGNING FIELD-SYMBOL( <fs> ) 또는 INTO 사용', /\bLOOP AT \w+ (?:ASSIGNING FIELD-SYMBOL \( <\w+> \)|INTO (?:DATA \( \w+ \)|\w+))/), K.re('WRITE로 출력', /\bWRITE\b/), K.re('ENDLOOP로 종료', /\bENDLOOP\b/)] }; });
+  def('loop_result', T.res, '기초', '작성', null, c => { const [a, b] = c.focused.length > 1 ? c.focused : [c.focused[0], c.focused[0]]; return { name: '조회 결과 LOOP로 출력하기', cols: c.focused, semantic: false, plain: true, snippet: fmt({ cols: c.focused, from: c.table, into: intoT(c) }), req: `위 SELECT로 @${c.rv}에 채워진 결과를 LOOP AT으로 한 행씩 읽어 ${a}, ${b}를 WRITE하세요. 필드 심볼(ASSIGNING FIELD-SYMBOL) 또는 INTO DATA(...)를 사용합니다.`, answer: `LOOP AT ${c.rv} ASSIGNING FIELD-SYMBOL(<LS_ROW>).\n  WRITE: / <LS_ROW>-${a}, <LS_ROW>-${b}.\nENDLOOP.`, note: 'ASSIGNING FIELD-SYMBOL은 행을 복사하지 않아 INTO보다 효율적이고, 값을 바꾸면 내부 테이블에도 반영됩니다.', checks: [K.re(`LOOP AT ${c.rv}`, new RegExp('\\bLOOP AT ' + c.rv + '\\b')), K.re('ASSIGNING FIELD-SYMBOL( <fs> ) 또는 INTO 사용', /\bLOOP AT \w+ (?:ASSIGNING FIELD-SYMBOL \( <\w+> \)|INTO (?:DATA \( \w+ \)|\w+))/), K.re('WRITE로 출력', /\bWRITE\b/), K.re('ENDLOOP로 종료', /\bENDLOOP\b/)] }; });
 
   def('appending', T.res, '중급', '작성', okInfo, c => {
     const f = c.gf, vals = colVals(c.table, f).map(String), a = vals[0] || 'AA', b = vals[1] || 'LH', cols = c.focused;
@@ -494,7 +483,7 @@
 
   def('fix_having', T.agg, '중급', '오류 수정', null, c => {
     const cols = [c.gf, 'COUNT( * ) AS ROW_COUNT'];
-    return { name: 'WHERE의 집계 함수를 HAVING으로', cols, bindings: { LV_MIN_COUNT: 2 }, snippet: `SELECT ${cols.join(', ')}\n  FROM ${c.table}\n  WHERE COUNT( * ) >= @LV_MIN_COUNT\n  GROUP BY ${c.gf}\n  INTO TABLE @${c.rv}.`, req: `위 코드는 WHERE에서 집계 함수를 써서 오류가 납니다. ${c.gf}별 건수가 @LV_MIN_COUNT 이상인 그룹만 남기도록 고쳐 쓰세요.`, answer: fmt({ cols, from: c.table, group: c.gf, having: 'COUNT( * ) >= @LV_MIN_COUNT', into: intoT(c) }), note: '집계 결과를 거르는 조건은 HAVING에만 쓸 수 있습니다.', checks: baseChecks(c, [c.gf], [K.no('WHERE에 집계 함수를 쓰지 않음', /\bWHERE COUNT\b/), K.re('HAVING COUNT( * ) >= @LV_MIN_COUNT', /\bHAVING COUNT \( \* \) >= @LV_MIN_COUNT\b/), K.re(`GROUP BY ${c.gf}`, new RegExp('\\bGROUP BY ' + anyCol(c.gf)))]) };
+    return { name: 'WHERE의 집계 함수를 HAVING으로', cols, bindings: { LV_MIN_COUNT: minCnt(c, c.gf) }, snippet: `SELECT ${cols.join(', ')}\n  FROM ${c.table}\n  WHERE COUNT( * ) >= @LV_MIN_COUNT\n  GROUP BY ${c.gf}\n  INTO TABLE @${c.rv}.`, req: `위 코드는 WHERE에서 집계 함수를 써서 오류가 납니다. ${c.gf}별 건수가 @LV_MIN_COUNT 이상인 그룹만 남기도록 고쳐 쓰세요.`, answer: fmt({ cols, from: c.table, group: c.gf, having: 'COUNT( * ) >= @LV_MIN_COUNT', into: intoT(c) }), note: '집계 결과를 거르는 조건은 HAVING에만 쓸 수 있습니다.', checks: baseChecks(c, [c.gf], [K.no('WHERE에 집계 함수를 쓰지 않음', /\bWHERE COUNT\b/), K.re('HAVING COUNT( * ) >= @LV_MIN_COUNT', /\bHAVING COUNT \( \* \) >= @LV_MIN_COUNT\b/), K.re(`GROUP BY ${c.gf}`, new RegExp('\\bGROUP BY ' + anyCol(c.gf)))]) };
   });
 
   def('fix_range_eq', T.cond, '기초', '오류 수정', okInfo, c => {
@@ -539,128 +528,86 @@
     return { name: '정렬 후 첫 행 예측하기', cols: showCols, expects: val, expectsLabel: `첫 행의 ${lab}`, preview: previewRows(c.table, showCols), snippet: fmt({ cols: [lab], from: c.table, order: `${n} ${desc ? 'DESCENDING' : 'ASCENDING'}`, into: 'TABLE @GT_RESULT', upTo: 1 }), req: `아래 SELECT 실행 후 @GT_RESULT의 첫(유일한) 행에서 ${lab} 값은 무엇일까요? 아래 가상 데이터를 보고 입력창에 값만 적어 제출하세요.`, checks: [] };
   });
 
-  /* SUM + CASE: 조건에 맞는 행을 1/0으로 바꿔 그룹별 개수를 집계 */
-  def('sbook_case_sum', T.agg, '중급', '작성', c => c.table === 'SBOOK' || /\bFROM\s+SBOOK\b/i.test(c.project.source || ''), c => {
-    const smoker = "SUM( CASE WHEN SMOKER = 'X' THEN 1 ELSE 0 END ) AS SMOKER_CNT";
-    const nonsmoker = "SUM( CASE WHEN SMOKER = ' ' THEN 1 ELSE 0 END ) AS NONSMK_CNT";
-    const into = 'CORRESPONDING FIELDS OF TABLE @GT_CONNECTIONS';
-    return {
-      name: 'CASE와 SUM으로 흡연 여부별 인원 집계', table: 'SBOOK', cols: ['CARRID', 'CONNID', 'SMOKER_CNT', 'NONSMK_CNT'],
-      req: 'SBOOK에서 항공사·항공편별 흡연자와 비흡연자 수를 한 번의 조회로 집계하세요. 예약 행을 한 건씩 가져와 ABAP에서 세지 말고 조건별 집계를 작성하세요.',
-      answer: fmt({ cols: ['CARRID', 'CONNID', smoker, nonsmoker], from: 'SBOOK', where: 'CARRID IN @SO_CAR AND FLDATE IN @SO_FDT', group: 'CARRID, CONNID', order: 'CARRID, CONNID', into }),
-      h1: 'CASE는 각 예약 행을 조건에 따라 숫자로 바꿉니다. SMOKER = \'X\'이면 1, 아니면 0을 반환합니다.',
-      h2: 'SUM은 GROUP BY로 묶인 항공사·항공편 안에서 그 1들을 더합니다. 비흡연자는 공백을 1, 나머지는 0으로 세면 됩니다.',
-      checks: [K.sel, K.from('SBOOK'), K.re('흡연자를 CASE와 SUM으로 세기', /SUM \( CASE WHEN SMOKER = 'X' THEN 1 ELSE 0 END \) AS SMOKER_CNT/), K.re('비흡연자를 CASE와 SUM으로 세기', /SUM \( CASE WHEN SMOKER = ' ' THEN 1 ELSE 0 END \) AS NONSMK_CNT/), K.re('항공사·항공편별 GROUP BY', /GROUP BY CARRID , CONNID/), K.re('선택 범위 적용', /CARRID IN @SO_CAR AND FLDATE IN @SO_FDT/), K.has('집계 결과 내부 테이블로 저장', `INTO ${into}`)],
-      semantic: false
-    };
-  });
-
-  const abapSnippet = (name, req, answer, h1, h2, checks) => ({
-    name, req, answer, checks, h1, h2, semantic: false, submissionType: 'abap'
-  });
-  def('abap_types_structure', T.types, '기초', 'ABAP 작성', null, c => abapSnippet(
-    'TYPES로 집계 결과 행 구조 만들기',
-    '흡연자 집계 프로그램의 한 행 구조를 TY_CONNECTION으로 정의하세요. CARRID와 CONNID는 SBOOK 필드 타입을 참조하고, SMOKER_CNT와 NONSMK_CNT는 INT8로 선언하세요.',
-    'TYPES: BEGIN OF ty_connection,\n  carrid     TYPE sbook-carrid,\n  connid     TYPE sbook-connid,\n  smoker_cnt TYPE int8,\n  nonsmk_cnt TYPE int8,\nEND OF ty_connection.',
-    'TYPES는 새 자료형의 모양만 정의합니다. 이 문장만으로 메모리에 담을 변수가 만들어지지는 않습니다.',
-    'DB 필드와 같은 타입을 쓰려면 TYPE sbook-carrid처럼 참조하고, 집계 건수는 넉넉한 정수 타입 INT8로 둘 수 있습니다.',
-    [K.re('TYPES 구조 시작', /TYPES : BEGIN OF TY_CONNECTION/), K.re('CARRID 타입 참조', /CARRID TYPE SBOOK-CARRID/), K.re('CONNID 타입 참조', /CONNID TYPE SBOOK-CONNID/), K.re('흡연자 집계 타입', /SMOKER_CNT TYPE INT8/), K.re('비흡연자 집계 타입', /NONSMK_CNT TYPE INT8/), K.re('TYPES 구조 종료', /END OF TY_CONNECTION/)]
-  ));
-  def('abap_table_of_line_type', T.types, '기초', 'ABAP 작성', null, c => abapSnippet(
-    'TYPE TABLE OF로 내부 테이블 선언하기',
-    '앞에서 정의한 TY_CONNECTION 행을 여러 개 담을 전역 내부 테이블 GT_CONNECTIONS를 선언하세요.',
-    'DATA gt_connections TYPE TABLE OF ty_connection.',
-    'TYPE TABLE OF는 한 행의 타입을 바탕으로 여러 행을 담을 내부 테이블을 선언합니다.',
-    'TYPES TY_CONNECTION은 행 구조, DATA GT_CONNECTIONS는 실제 데이터를 보관할 테이블 변수입니다.',
-    [K.re('실제 변수는 DATA로 선언', /DATA GT_CONNECTIONS/), K.re('행 타입은 TY_CONNECTION', /TYPE TABLE OF TY_CONNECTION/)]
-  ));
-  def('abap_like_line_of', T.types, '기초', 'ABAP 작성', null, c => abapSnippet(
-    'LIKE LINE OF로 한 행 작업영역 선언하기',
-    'GT_CONNECTIONS의 한 행을 LOOP AT에서 처리할 작업영역 GS_CONNECTION을 선언하세요. 기존 행 타입을 다시 적지 말고 LIKE LINE OF를 사용하세요.',
-    'DATA gs_connection LIKE LINE OF gt_connections.',
-    'LIKE LINE OF는 기존 내부 테이블의 한 행과 같은 구조의 작업영역을 선언합니다.',
-    '여러 행을 담는 새 테이블에는 TYPE TABLE OF, 기존 테이블에서 한 행을 받을 작업영역에는 LIKE LINE OF를 사용하세요.',
-    [K.re('작업영역은 DATA로 선언', /DATA GS_CONNECTION/), K.re('한 행 구조를 참조', /LIKE LINE OF GT_CONNECTIONS/)]
-  ));
-  def('abap_reusable_table_type', T.types, '중급', 'ABAP 작성', null, c => abapSnippet(
-    '재사용할 테이블 타입과 변수 분리하기',
-    'SBOOK 행을 담는 재사용 가능한 테이블 타입 TY_SBOOK_TAB을 TYPES로 정의한 뒤, 그 타입을 사용하는 GT_SBOOK 변수를 DATA로 선언하세요.',
-    'TYPES ty_sbook_tab TYPE TABLE OF sbook.\nDATA gt_sbook TYPE ty_sbook_tab.',
-    '테이블 타입을 여러 변수에서 재사용할 때 TYPES로 테이블 타입 이름을 먼저 정의합니다.',
-    'TYPES는 타입 이름만 만들고, DATA는 그 타입으로 실제 변수나 내부 테이블을 만듭니다.',
-    [K.re('재사용 테이블 타입 정의', /TYPES TY_SBOOK_TAB TYPE TABLE OF SBOOK/), K.re('변수에 정의한 타입 사용', /DATA GT_SBOOK TYPE TY_SBOOK_TAB/)]
-  ));
-  def('abap_local_table', T.types, '중급', 'ABAP 작성', null, c => abapSnippet(
-    '메서드 안에서 로컬 내부 테이블 선언하기',
-    'READ_BOOKINGS 메서드 안에서만 사용할 로컬 내부 테이블 LT_BOOKINGS와 한 행 작업영역 LS_BOOKING을 선언하세요.',
-    'METHOD read_bookings.\n  DATA lt_bookings TYPE TABLE OF sbook.\n  DATA ls_booking LIKE LINE OF lt_bookings.\nENDMETHOD.',
-    '메서드 본문 안에서 선언한 DATA는 그 메서드의 로컬 변수입니다.',
-    '메서드 바깥 보고서 전역 데이터와 달리 LT_BOOKINGS는 READ_BOOKINGS 메서드 안에서만 사용할 수 있습니다.',
-    [K.re('메서드 내부 시작', /METHOD READ_BOOKINGS/), K.re('로컬 내부 테이블', /DATA LT_BOOKINGS TYPE TABLE OF SBOOK/), K.re('로컬 작업영역', /DATA LS_BOOKING LIKE LINE OF LT_BOOKINGS/), K.re('메서드 내부 종료', /ENDMETHOD/)]
-  ));
-
-  /* 프로젝트 코드에서 각 SELECT 패턴을 별도 문제로 추가 */
-  const sourceQueries = source => strip(source).match(/\bSELECT\b[\s\S]*?\./gi) || [];
-  const usableSourceQueries = project => sourceQueries(project.source).filter(sql => validSourceQuery(project, sql));
-  const sourceLevel = sql => /\bSELECT\s+SINGLE\b/i.test(sql) || /\bORDER\s+BY\b/i.test(sql) ? '기초' : /\bJOIN\b|\bGROUP\s+BY\b/i.test(sql) ? '중급' : '기초';
-  function sourceSpec(project, seed, index) {
-    const sql = (usableSourceQueries(project)[index] || '').trim().replace(/\.$/, '');
-    if (!sql) return null;
-    const from = (sql.match(/\bFROM\s+([A-Z][A-Z0-9_]*)/i) || [])[1] || project.primaryTable || 'SFLIGHT';
-    const selectPart = (sql.match(/^\s*SELECT\s+[\s\S]*?\s+FROM\b/i) || [])[0]?.trim() || 'SELECT';
-    const checks = [K.sel, K.from(from), K.re('프로젝트 SELECT 열 목록', new RegExp(rxEsc(canon(selectPart))))];
-    const addClause = (label, pattern) => { const m = sql.match(pattern); if (m) checks.push(K.has(label, `${label} ${m[1].trim().replace(/\s+/g, ' ')}`)); };
+  /* ================= 3. 프로젝트 소스에서 만드는 문제 ================= */
+  const sourceQueries = source => strip(source).match(/\bSELECT\b(?!-)[\s\S]*?\./gi) || [];
+  const CLAUSES = [
+    ['WHERE', /(\bWHERE\s+)([\s\S]*?)(?=\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i],
+    ['GROUP BY', /(\bGROUP\s+BY\s+)([\s\S]*?)(?=\bHAVING\b|\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i],
+    ['HAVING', /(\bHAVING\s+)([\s\S]*?)(?=\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i],
+    ['ORDER BY', /(\bORDER\s+BY\s+)([\s\S]*?)(?=\bINTO\b|\bUP\s+TO\b|$)/i],
+    ['INTO', /(\bINTO\s+)([\s\S]*?)(?=\bUP\s+TO\b|$)/i]
+  ];
+  const stmtText = s => String(s).trim().replace(/\.$/, '');
+  const hideable = q => CLAUSES.filter(([, re]) => { const m = stmtText(q).match(re); return m && m[2].trim(); }).map(x => x[0]);
+  const sqlInfo = sql => /\bJOIN\b/i.test(sql) ? [T.join, '중급'] : /\bGROUP\s+BY\b/i.test(sql) ? [T.agg, '중급'] : /\bSINGLE\b/i.test(sql) ? [T.basic, '기초'] : /\bWHERE\b/i.test(sql) ? [T.cond, '기초'] : [T.basic, '기초'];
+  const pieceList = sql => {
+    const pieces = [], head = sql.match(/^\s*SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?([\s\S]*?)\s+FROM\s+([A-Z][A-Z0-9_]*)/i);
+    if (!head) return [sql];
+    const mod = (sql.match(/^\s*SELECT\s+(SINGLE|DISTINCT)\s/i) || [, ''])[1];
+    pieces.push(('SELECT ' + (mod ? mod + ' ' : '') + head[1]).replace(/\s+/g, ' ').trim(), 'FROM ' + head[2]);
     const join = sql.match(/\b((?:INNER|LEFT\s+OUTER|LEFT|RIGHT\s+OUTER|RIGHT)\s+JOIN\s+[A-Z][A-Z0-9_]*(?:\s+AS\s+[A-Z][A-Z0-9_]*)?)/i);
-    if (join) checks.push(K.has('프로젝트 JOIN 대상', join[1].replace(/\s+/g, ' ')));
-    addClause('ON', /\bON\s+([\s\S]*?)(?=\bWHERE\b|\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i);
-    addClause('WHERE', /\bWHERE\s+([\s\S]*?)(?=\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i);
-    addClause('GROUP BY', /\bGROUP\s+BY\s+([\s\S]*?)(?=\bHAVING\b|\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i);
-    addClause('HAVING', /\bHAVING\s+([\s\S]*?)(?=\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i);
-    addClause('ORDER BY', /\bORDER\s+BY\s+([\s\S]*?)(?=\bINTO\b|\bUP\s+TO\b|$)/i);
-    const into = sql.match(/\bINTO\s+([\s\S]*?)(?=\bUP\s+TO\b|$)/i);
-    if (into) checks.push(K.has('프로젝트 결과 저장 대상', `INTO ${into[1].trim().replace(/\s+/g, ' ')}`));
+    if (join) pieces.push(join[1].replace(/\s+/g, ' '));
+    const on = sql.match(/\bON\s+([\s\S]*?)(?=\bWHERE\b|\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i);
+    if (on) pieces.push('ON ' + on[1].trim().replace(/\s+/g, ' '));
+    CLAUSES.forEach(([name, re]) => { const m = sql.match(re); if (m && m[2].trim()) pieces.push(name + ' ' + m[2].trim().replace(/\s+/g, ' ')); });
     const limit = sql.match(/\bUP\s+TO\s+\d+\s+ROWS/i);
-    if (limit) checks.push(K.has('프로젝트 조회 건수 제한', limit[0]));
-    const bindings = {};
-    strip(project.source).split(/\r?\n/).forEach(line => {
-      const value = line.match(/\bPARAMETERS?\s*:?\s*([A-Z][A-Z0-9_]*)\b.*\bDEFAULT\s+'([^']*)'/i);
-      if (value) bindings[value[1].toUpperCase()] = value[2];
-    });
-    return {
-      name: `프로젝트 SELECT 패턴 ${index + 1} 다시 작성하기`, table: from, level: sourceLevel(sql),
-      req: `프로젝트 전체 코드에서 ${index + 1}번째 SELECT의 열, 조건, 정렬·집계·JOIN 구조를 찾아 Open SQL 조회문으로 다시 작성하세요.`,
-      answer: sql + '.', checks, bindings, semantic: true
-    };
+    if (limit) pieces.push(limit[0]);
+    return pieces;
+  };
+
+  function sourceProblem(c, mode, index, variant) {
+    const raw = sourceQueries(c.project.source)[index];
+    if (!raw) return build(c.project, c.seed, 'projection');
+    const sql = stmtText(raw), [topic, level] = sqlInfo(sql), pieces = pieceList(sql);
+    const table = (sql.match(/\bFROM\s+([A-Z][A-Z0-9_]*)/i) || [])[1] || c.table;
+    const list = (sql.match(/^\s*SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?([\s\S]*?)\s+FROM\b/i) || [, '*'])[1];
+    const cols = list.split(',').map(x => x.trim()).filter(Boolean);
+    const answer = sql + '.', checks = [K.sel, ...pieces.map(p => K.has(p, p))];
+    let d, spec;
+    if (mode === 'blank') {
+      const hide = hideable(sql); const name = c.r.pick(hide.length ? hide : ['WHERE']);
+      const re = CLAUSES.find(x => x[0] === name)[1];
+      const blanked = sql.replace(re, (m, a, b) => a + '____' + (b.match(/\s*$/) || [''])[0]) + '.';
+      d = { topic, level, kind: '빈칸 채우기' };
+      spec = { name: `프로젝트 코드 빈칸 채우기 ${index + 1} (${name})`, table, cols, snippet: blanked, req: `프로젝트 코드의 SELECT 중 ${name} 부분이 빈칸(____)입니다. 코드를 보고 빈칸을 복원해 SELECT 전체를 작성하세요.`, answer, checks, h1: '프로젝트 코드의 변수명과 조건을 떠올려 보세요. 빈칸은 ' + name + ' 절입니다.' };
+    } else {
+      const ty = /\bSINGLE\b/i.test(sql) ? 'SELECT SINGLE 연습' : /\bJOIN\b/i.test(sql) ? '프로젝트 JOIN 연습' : /\bGROUP\s+BY\b/i.test(sql) ? '프로젝트 그룹 집계 연습' : /\bORDER\s+BY\b/i.test(sql) ? '정렬과 행 수 제한 연습' : '프로젝트 조회 패턴 연습';
+      d = { topic, level, kind: '프로젝트 코드' };
+      spec = { name: ty + ' ' + (index + 1), table, cols, req: `프로젝트 코드의 조회 패턴 ${index + 1}을 Open SQL SELECT 구문으로 다시 작성하세요. 이 문제는 ${ty.replace(' 연습', '')}을 포함합니다.`, answer, checks, h1: '프로젝트 전체 코드에서 이 SELECT 패턴의 목적을 먼저 확인하세요.', h2: 'SELECT, FROM, WHERE·JOIN·GROUP BY 등의 절을 코드의 순서대로 작성하세요.' };
+    }
+    return finalize(c, spec, d, variant);
   }
-  const writingKinds = new Set(['작성', '오류 수정', '문법 변환', 'ABAP 작성']);
-  const sourceVariant = variant => /^source_query_(\d+)$/.exec(String(variant || ''));
-  function variants(project) {
-    const seed = '51a7c0de';
-    const c = ctxOf(project, seed);
-    const ids = ORDER.filter(id => {
-      const d = REG[id];
-      if (!writingKinds.has(d.kind)) return false;
-      try { return !!d.ok(c); } catch (_) { return false; }
-    });
-    usableSourceQueries(project).forEach((_, i) => ids.push('source_query_' + i));
-    return ids;
-  }
-  function level(project, seed, variant) {
-    const source = sourceVariant(variant);
-    if (source) return sourceLevel(usableSourceQueries(project)[Number(source[1])] || '');
-    const defn = REG[variant];
-    return defn ? defn.level : '기초';
-  }
+
+  /* ================= 4. 공개 API ================= */
   function build(project, seed, variant = 'projection') {
     const c = ctxOf(project, seed);
-    const source = sourceVariant(variant);
-    if (source) {
-      const spec = sourceSpec(project, seed, Number(source[1]));
-      return spec ? finalize(c, spec, { topic: 'SELECT 구문 연습', level: spec.level, kind: '작성' }, variant) : finalize(c, REG.projection.make(c), REG.projection, 'projection');
-    }
-    let d = REG[variant] || REG.projection;
-    if (!d.ok(c)) d = REG.projection;
-    return finalize(c, d.make(c), d, variant);
+    const m = String(variant).match(/^source_(query|blank)_(\d+)$/);
+    if (m) return sourceProblem(c, m[1], Number(m[2]), variant);
+    const d = REG[variant] || REG.projection;
+    return finalize(c, d.make(c), d, REG[variant] ? variant : 'projection');
   }
-  window.openSqlProjectProblem = { build, variants, level };
+  function variants(project) {
+    const c = ctxOf(project, '00000000');
+    // Keep the practice pool focused on answers that execute as one Open SQL SELECT.
+    const ids = ORDER.filter(id => {
+      try {
+        if (!REG[id].ok(c)) return false;
+        const spec = REG[id].make(c);
+        return !!window.openSqlRunner && window.openSqlRunner.run(spec.answer, {
+          data: DB(),
+          project,
+          bindings: spec.bindings || {}
+        }).ok;
+      } catch (e) { return false; }
+    });
+    sourceQueries(project.source).forEach((q, i) => { ids.push('source_query_' + i); if (hideable(q).length) ids.push('source_blank_' + i); });
+    return ids;
+  }
+  function meta(project, variant) {
+    if (REG[variant]) { const d = REG[variant]; return { topic: d.topic, level: d.level, kind: d.kind }; }
+    const m = /^source_(query|blank)_(\d+)$/.exec(String(variant));
+    if (m) { const [topic, level] = sqlInfo(stmtText(sourceQueries(project.source)[+m[2]] || '')); return { topic, level, kind: m[1] === 'blank' ? '빈칸 채우기' : '프로젝트 코드' }; }
+    return { topic: T.basic, level: '기초', kind: '작성' };
+  }
+  window.openSqlProjectProblem = { build, variants, meta, topics: Object.values(T) };
 })();

@@ -2,7 +2,7 @@ name: Deploy Open SQL Lab to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -21,15 +21,28 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check out source
+      - name: Check out production source
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: production
+      - name: Check out development preview source
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: development
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Prepare static site
         run: |
-          mkdir -p _site
-          cp index.html styles.css app.js project-problem.js sql-runner.js _site/
-          sed -i "s#project-problem.js#project-problem.js?v=${GITHUB_SHA}#g; s#sql-runner.js#sql-runner.js?v=${GITHUB_SHA}#g; s#app.js#app.js?v=${GITHUB_SHA}#g" _site/index.html
+          mkdir -p _site/dev
+          cp production/index.html production/styles.css production/app.js production/project-problem.js production/sql-runner.js _site/
+          cp development/index.html development/styles.css development/app.js development/project-problem.js development/sql-runner.js _site/dev/
+          PROD_SHA=$(git -C production rev-parse --short HEAD)
+          DEV_SHA=$(git -C development rev-parse --short HEAD)
+          sed -i "s#project-problem.js#project-problem.js?v=${PROD_SHA}#g; s#sql-runner.js#sql-runner.js?v=${PROD_SHA}#g; s#app.js#app.js?v=${PROD_SHA}#g" _site/index.html
+          sed -i "s#project-problem.js#project-problem.js?v=${DEV_SHA}#g; s#sql-runner.js#sql-runner.js?v=${DEV_SHA}#g; s#app.js#app.js?v=${DEV_SHA}#g" _site/dev/index.html
+          sed -i 's#<body>#<body><div style="position:sticky;top:0;z-index:1000;padding:8px 14px;background:purple;color:white;text-align:center;font:600 13px sans-serif">DEV 미리보기 · 테스트 버전</div>#' _site/dev/index.html
           touch _site/.nojekyll
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -1,35 +1,61 @@
 (()=>{
   const KEY='openSqlLab.v1';
   const TABLES={
-    SCARR:{desc:'항공사 기본 정보',fields:{MANDT:'클라이언트 · 키',CARRID:'항공사 코드 · 키',CARRNAME:'항공사 이름',CURRCODE:'통화 코드',URL:'웹사이트'}},
-    SPFLI:{desc:'항공편 연결 및 노선 정보',fields:{MANDT:'클라이언트 · 키',CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',COUNTRYFR:'출발 국가',CITYFROM:'출발 도시',AIRPFROM:'출발 공항',COUNTRYTO:'도착 국가',CITYTO:'도착 도시',AIRPTO:'도착 공항',FLTIME:'비행 시간',DEPTIME:'출발 시각',ARRTIME:'도착 시각',DISTANCE:'거리',DISTID:'거리 단위',FLTYPE:'항공편 유형',PERIOD:'도착 추가 일수'}},
-    SFLIGHT:{desc:'항공편 날짜별 운항 정보',fields:{MANDT:'클라이언트 · 키',CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',PRICE:'가격',CURRENCY:'통화',PLANETYPE:'항공기 유형',SEATSMAX:'이코노미 최대 좌석',SEATSOCC:'이코노미 예약 좌석',PAYMENTSUM:'예약 결제 합계',SEATSMAX_B:'비즈니스 최대 좌석',SEATSOCC_B:'비즈니스 예약 좌석',SEATSMAX_F:'일등석 최대 좌석',SEATSOCC_F:'일등석 예약 좌석'}},
-    SBOOK:{desc:'항공편 예약 정보',fields:{MANDT:'클라이언트 · 키',CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',BOOKID:'예약 번호 · 키',CUSTOMID:'고객 번호',CUSTTYPE:'고객 유형',SMOKER:'흡연 여부',LUGGWEIGHT:'수하물 무게',WUNIT:'무게 단위',INVOICE:'청구서 발행 여부',CLASS:'좌석 등급',FORCURAM:'외화 금액',FORCURKEY:'외화 통화',LOCCURAM:'현지 통화 금액',LOCCURKEY:'현지 통화 코드',ORDER_DATE:'예약 일자',COUNTER:'판매 카운터 번호',AGENCYNUM:'여행사 번호',CANCELLED:'취소 여부',RESERVED:'예약 상태',PASSNAME:'탑승자 이름',PASSFORM:'호칭',PASSBIRTH:'탑승자 생년월일'}}
+    SCARR:{desc:'항공사 기본 정보',fields:{CARRID:'항공사 코드 · 키',CARRNAME:'항공사 이름',CURRCODE:'통화 코드',URL:'웹사이트'}},
+    SPFLI:{desc:'항공편 연결 및 노선 정보',fields:{CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',COUNTRYFR:'출발 국가',CITYFROM:'출발 도시',AIRPFROM:'출발 공항',COUNTRYTO:'도착 국가',CITYTO:'도착 도시',AIRPTO:'도착 공항',FLTIME:'비행 시간(분)',DEPTIME:'출발 시각',ARRTIME:'도착 시각',DISTANCE:'거리',DISTID:'거리 단위',FLTYPE:'전세기 여부(X)',PERIOD:'도착 일수 차이'}},
+    SFLIGHT:{desc:'항공편 날짜별 운항 정보',fields:{CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',PRICE:'가격',CURRENCY:'통화',PLANETYPE:'항공기 유형',SEATSMAX:'최대 좌석 수',SEATSOCC:'점유 좌석 수',PAYMENTSUM:'결제 합계',SEATSMAX_B:'비즈니스 최대 좌석',SEATSOCC_B:'비즈니스 점유 좌석',SEATSMAX_F:'일등석 최대 좌석',SEATSOCC_F:'일등석 점유 좌석'}},
+    SBOOK:{desc:'항공편 예약 정보',fields:{CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',BOOKID:'예약 번호 · 키',CUSTOMID:'고객 번호',CUSTTYPE:'고객 유형(B 기업/P 개인)',SMOKER:'흡연석(X)',LUGGWEIGHT:'수하물 무게',WUNIT:'무게 단위',INVOICE:'청구서 발행(X)',CLASS:'좌석 등급(Y/C/F)',FORCURAM:'외화 금액',FORCURKEY:'외화 통화',LOCCURAM:'현지 통화 금액',LOCCURKEY:'현지 통화',ORDER_DATE:'예약 일자',CANCELLED:'취소 여부(X)',PASSNAME:'탑승자 이름'}}
   };
-  const DATA={
-    SCARR:[{CARRID:'AA',CARRNAME:'아메리칸 항공',CURRCODE:'USD',URL:'www.aa.com'},{CARRID:'JL',CARRNAME:'일본항공',CURRCODE:'JPY',URL:'www.jal.com'},{CARRID:'LH',CARRNAME:'루프트한자',CURRCODE:'EUR',URL:'www.lufthansa.com'},{CARRID:'QF',CARRNAME:'콴타스 항공',CURRCODE:'AUD',URL:'www.qantas.com'},{CARRID:'SQ',CARRNAME:'싱가포르 항공',CURRCODE:'SGD',URL:'www.singaporeair.com'}],
-    SPFLI:[{CARRID:'AA',CONNID:'0017',CITYFROM:'NEW YORK',CITYTO:'SAN FRANCISCO',DISTANCE:2572,DISTID:'MI',FLTIME:350},{CARRID:'JL',CONNID:'0407',CITYFROM:'TOKYO',CITYTO:'FRANKFURT',DISTANCE:9360,DISTID:'KM',FLTIME:720},{CARRID:'LH',CONNID:'0400',CITYFROM:'FRANKFURT',CITYTO:'NEW YORK',DISTANCE:6200,DISTID:'KM',FLTIME:510},{CARRID:'QF',CONNID:'0012',CITYFROM:'SYDNEY',CITYTO:'SINGAPORE',DISTANCE:6300,DISTID:'KM',FLTIME:490},{CARRID:'SQ',CONNID:'0025',CITYFROM:'SINGAPORE',CITYTO:'TOKYO',DISTANCE:5310,DISTID:'KM',FLTIME:390},{CARRID:'AA',CONNID:'0064',CITYFROM:'CHICAGO',CITYTO:'NEW YORK',DISTANCE:1180,DISTID:'MI',FLTIME:145}],
-    SFLIGHT:[{CARRID:'AA',CONNID:'0017',FLDATE:'2026-12-02',PRICE:540,CURRENCY:'USD',PLANETYPE:'747-400',SEATSMAX:380,SEATSOCC:342},{CARRID:'AA',CONNID:'0017',FLDATE:'2026-12-04',PRICE:610,CURRENCY:'USD',PLANETYPE:'747-400',SEATSMAX:380,SEATSOCC:355},{CARRID:'JL',CONNID:'0407',FLDATE:'2026-12-03',PRICE:980,CURRENCY:'JPY',PLANETYPE:'A340-600',SEATSMAX:330,SEATSOCC:287},{CARRID:'LH',CONNID:'0400',FLDATE:'2026-12-05',PRICE:820,CURRENCY:'EUR',PLANETYPE:'A340-600',SEATSMAX:330,SEATSOCC:330},{CARRID:'QF',CONNID:'0012',FLDATE:'2026-12-06',PRICE:740,CURRENCY:'AUD',PLANETYPE:'747-400',SEATSMAX:380,SEATSOCC:301},{CARRID:'SQ',CONNID:'0025',FLDATE:'2026-12-08',PRICE:690,CURRENCY:'SGD',PLANETYPE:'A340-600',SEATSMAX:330,SEATSOCC:310},{CARRID:'AA',CONNID:'0064',FLDATE:'2026-12-07',PRICE:320,CURRENCY:'USD',PLANETYPE:'A320-200',SEATSMAX:180,SEATSOCC:142}],
-    SBOOK:[{CARRID:'AA',CONNID:'0017',FLDATE:'2026-12-02',BOOKID:'000001',CUSTOMID:'00001001',FORCURAM:540,FORCURKEY:'USD',CANCELLED:''},{CARRID:'AA',CONNID:'0017',FLDATE:'2026-12-02',BOOKID:'000002',CUSTOMID:'00001002',FORCURAM:540,FORCURKEY:'USD',CANCELLED:'X'},{CARRID:'JL',CONNID:'0407',FLDATE:'2026-12-03',BOOKID:'000003',CUSTOMID:'00001003',FORCURAM:980,FORCURKEY:'JPY',CANCELLED:''},{CARRID:'LH',CONNID:'0400',FLDATE:'2026-12-05',BOOKID:'000004',CUSTOMID:'00001004',FORCURAM:820,FORCURKEY:'EUR',CANCELLED:''}]
-  };
-  // Every standard DDIC column is present in the mock rows so SELECT validation,
-  // autocomplete and displayed results use the same complete field catalog.
-  const numericFields=new Set(['PRICE','SEATSMAX','SEATSOCC','PAYMENTSUM','SEATSMAX_B','SEATSOCC_B','SEATSMAX_F','SEATSOCC_F','FLTIME','DISTANCE','PERIOD','LUGGWEIGHT','FORCURAM','LOCCURAM']);
-  Object.entries(DATA).forEach(([table,rows])=>rows.forEach((row,i)=>{
-    Object.keys(TABLES[table].fields).forEach(field=>{if(!(field in row))row[field]=field==='MANDT'?'000':numericFields.has(field)?0:'';});
-    if(table==='SPFLI')Object.assign(row,[
-      {COUNTRYFR:'US',AIRPFROM:'JFK',COUNTRYTO:'US',AIRPTO:'SFO',DEPTIME:'090000',ARRTIME:'144000',FLTYPE:'',PERIOD:0},
-      {COUNTRYFR:'JP',AIRPFROM:'HND',COUNTRYTO:'DE',AIRPTO:'FRA',DEPTIME:'110000',ARRTIME:'170000',FLTYPE:'X',PERIOD:0},
-      {COUNTRYFR:'DE',AIRPFROM:'FRA',COUNTRYTO:'US',AIRPTO:'JFK',DEPTIME:'100000',ARRTIME:'130000',FLTYPE:'',PERIOD:0},
-      {COUNTRYFR:'AU',AIRPFROM:'SYD',COUNTRYTO:'SG',AIRPTO:'SIN',DEPTIME:'080000',ARRTIME:'160000',FLTYPE:'',PERIOD:0},
-      {COUNTRYFR:'SG',AIRPFROM:'SIN',COUNTRYTO:'JP',AIRPTO:'HND',DEPTIME:'120000',ARRTIME:'190000',FLTYPE:'',PERIOD:0},
-      {COUNTRYFR:'US',AIRPFROM:'ORD',COUNTRYTO:'US',AIRPTO:'JFK',DEPTIME:'070000',ARRTIME:'093000',FLTYPE:'',PERIOD:0}
-    ][i]);
-    if(table==='SFLIGHT'){row.PAYMENTSUM=row.PRICE*row.SEATSOCC;row.SEATSMAX_B=40;row.SEATSOCC_B=Math.min(38,Math.round(row.SEATSOCC/12));row.SEATSMAX_F=20;row.SEATSOCC_F=Math.min(18,Math.round(row.SEATSOCC/30));}
-    if(table==='SBOOK')Object.assign(row,{SMOKER:i%2?'':'X',CUSTTYPE:i%2?'B':'P',LUGGWEIGHT:18+i*3,WUNIT:'KG',INVOICE:'X',CLASS:i%2?'C':'Y',LOCCURAM:row.FORCURAM,LOCCURKEY:row.FORCURKEY,ORDER_DATE:'2026-11-20',COUNTER:'00000001',AGENCYNUM:'00000001',RESERVED:'',PASSNAME:['Alex Morgan','Jamie Lee','Mina Park','Noah Kim'][i],PASSFORM:i%2?'MS':'MR',PASSBIRTH:['1990-04-12','1988-09-03','1995-02-21','1992-07-16'][i]});
-  }));
+  /* 가상 예제 데이터: 의도적으로 경계 사례를 포함합니다.
+     - UA: 노선이 없는 항공사 / JL 0408: 운항 일정이 없는 노선 / 일부 운항편: 예약 없음 / 만석 운항편 / 취소 예약 */
+  const DATA=(()=>{
+    const SCARR=[['AA','아메리칸 항공','USD','www.aa.com'],['JL','일본항공','JPY','www.jal.com'],['LH','루프트한자','EUR','www.lufthansa.com'],['QF','콴타스 항공','AUD','www.qantas.com'],['SQ','싱가포르 항공','SGD','www.singaporeair.com'],['UA','유나이티드 항공','USD','www.united.com']]
+      .map(([CARRID,CARRNAME,CURRCODE,URL])=>({CARRID,CARRNAME,CURRCODE,URL}));
+    const SPFLI=[
+      ['AA','0017','US','NEW YORK','JFK','US','SAN FRANCISCO','SFO',361,'11:00:00','14:01:00',2572,'MI','',0],
+      ['AA','0064','US','CHICAGO','ORD','US','NEW YORK','JFK',145,'09:30:00','12:55:00',1180,'MI','',0],
+      ['JL','0407','JP','TOKYO','NRT','DE','FRANKFURT','FRA',720,'13:35:00','18:35:00',9360,'KM','',0],
+      ['JL','0408','JP','TOKYO','NRT','US','SAN FRANCISCO','SFO',600,'17:00:00','10:00:00',8280,'KM','',0],
+      ['LH','0400','DE','FRANKFURT','FRA','US','NEW YORK','JFK',510,'10:10:00','12:40:00',6200,'KM','',0],
+      ['LH','0402','DE','FRANKFURT','FRA','US','SAN FRANCISCO','SFO',690,'12:45:00','15:15:00',9100,'KM','X',0],
+      ['QF','0012','AU','SYDNEY','SYD','SG','SINGAPORE','SIN',490,'08:20:00','14:30:00',6300,'KM','',0],
+      ['SQ','0025','SG','SINGAPORE','SIN','JP','TOKYO','NRT',390,'09:00:00','16:30:00',5310,'KM','',0],
+      ['SQ','0158','SG','SINGAPORE','SIN','DE','FRANKFURT','FRA',780,'23:30:00','06:30:00',10260,'KM','',1]
+    ].map(([CARRID,CONNID,COUNTRYFR,CITYFROM,AIRPFROM,COUNTRYTO,CITYTO,AIRPTO,FLTIME,DEPTIME,ARRTIME,DISTANCE,DISTID,FLTYPE,PERIOD])=>({CARRID,CONNID,COUNTRYFR,CITYFROM,AIRPFROM,COUNTRYTO,CITYTO,AIRPTO,FLTIME,DEPTIME,ARRTIME,DISTANCE,DISTID,FLTYPE,PERIOD}));
+    const PLANE={'747-400':380,'A340-600':330,'A320-200':180};
+    const SFLIGHT=[
+      ['AA','0017','2026-12-02',540,'USD','747-400',342],['AA','0017','2026-12-04',610,'USD','747-400',355],['AA','0017','2026-12-09',595,'USD','747-400',301],
+      ['AA','0064','2026-12-07',320,'USD','A320-200',142],['AA','0064','2026-12-14',335,'USD','A320-200',90],
+      ['JL','0407','2026-12-03',980,'JPY','A340-600',287],['JL','0407','2026-12-10',995,'JPY','A340-600',264],
+      ['LH','0400','2026-12-05',820,'EUR','A340-600',330],['LH','0400','2026-12-12',850,'EUR','A340-600',301],['LH','0402','2026-12-06',910,'EUR','A340-600',120],
+      ['QF','0012','2026-12-06',740,'AUD','747-400',301],
+      ['SQ','0025','2026-12-08',690,'SGD','A340-600',310],['SQ','0025','2026-12-15',700,'SGD','A340-600',330],['SQ','0158','2026-12-09',760,'SGD','A340-600',250]
+    ].map(([CARRID,CONNID,FLDATE,PRICE,CURRENCY,PLANETYPE,SEATSOCC])=>{
+      const SEATSMAX=PLANE[PLANETYPE],SEATSMAX_B=Math.round(SEATSMAX*.1),SEATSMAX_F=Math.round(SEATSMAX*.03);
+      return {CARRID,CONNID,FLDATE,PRICE,CURRENCY,PLANETYPE,SEATSMAX,SEATSOCC,PAYMENTSUM:PRICE*SEATSOCC,SEATSMAX_B,SEATSOCC_B:Math.min(SEATSMAX_B,Math.round(SEATSOCC*.08)),SEATSMAX_F,SEATSOCC_F:Math.min(SEATSMAX_F,Math.round(SEATSOCC*.02))};
+    });
+    const SBOOK=[
+      ['AA','0017','2026-12-02','000001','00001001','B','',20,'Y',540,'USD',540,'USD','','2026-10-11','KIM MINJUN'],
+      ['AA','0017','2026-12-02','000002','00001002','P','X',15,'Y',540,'USD',540,'USD','X','2026-10-12','LEE SOYEON'],
+      ['JL','0407','2026-12-03','000003','00001003','B','',22,'Y',980,'JPY',980,'JPY','','2026-10-18','PARK JIHO'],
+      ['LH','0400','2026-12-05','000004','00001004','P','',14,'Y',820,'EUR',820,'EUR','','2026-10-25','CHOI YUNA'],
+      ['AA','0017','2026-12-02','000005','00001003','B','',25,'C',1080,'USD',1080,'USD','','2026-10-15','PARK JIHO'],
+      ['AA','0017','2026-12-04','000006','00001001','B','',18,'Y',610,'USD',610,'USD','','2026-10-20','KIM MINJUN'],
+      ['AA','0064','2026-12-07','000007','00001004','P','X',12,'Y',320,'USD',320,'USD','','2026-11-01','CHOI YUNA'],
+      ['AA','0064','2026-12-07','000008','00001005','P','',30,'Y',320,'USD',320,'USD','X','2026-11-03','JUNG HAEIN'],
+      ['JL','0407','2026-12-03','000009','00001005','B','',10,'C',1960,'JPY',1960,'JPY','','2026-10-29','JUNG HAEIN'],
+      ['LH','0400','2026-12-05','000010','00001002','B','',19,'Y',820,'EUR',820,'EUR','','2026-11-05','LEE SOYEON'],
+      ['LH','0400','2026-12-05','000011','00001006','P','X',23,'F',2460,'EUR',2460,'EUR','','2026-11-06','HAN DOYUN'],
+      ['LH','0400','2026-12-12','000012','00001006','P','',16,'Y',850,'EUR',850,'EUR','','2026-11-10','HAN DOYUN'],
+      ['JL','0407','2026-12-10','000013','00001001','B','',21,'Y',995,'JPY',995,'JPY','','2026-11-12','KIM MINJUN'],
+      ['AA','0017','2026-12-09','000014','00001002','P','',17,'Y',595,'USD',595,'USD','','2026-11-15','LEE SOYEON'],
+      ['SQ','0158','2026-12-09','000015','00001007','B','',20,'C',1520,'SGD',1520,'SGD','','2026-11-16','SEO JIWON'],
+      ['AA','0017','2026-12-09','000016','00001007','B','X',28,'Y',560,'EUR',595,'USD','','2026-11-18','SEO JIWON']
+    ].map(([CARRID,CONNID,FLDATE,BOOKID,CUSTOMID,CUSTTYPE,SMOKER,LUGGWEIGHT,CLASS,FORCURAM,FORCURKEY,LOCCURAM,LOCCURKEY,CANCELLED,ORDER_DATE,PASSNAME])=>({CARRID,CONNID,FLDATE,BOOKID,CUSTOMID,CUSTTYPE,SMOKER,LUGGWEIGHT,WUNIT:'KG',INVOICE:CANCELLED?'':'X',CLASS,FORCURAM,FORCURKEY,LOCCURAM,LOCCURKEY,ORDER_DATE,CANCELLED,PASSNAME}));
+    return {SCARR,SPFLI,SFLIGHT,SBOOK};
+  })();
   window.OPEN_SQL_DATA=DATA;
-  const TOPICS=['SELECT 기초','조건과 범위','집계와 그룹','JOIN과 서브쿼리'];
+  const TOPICS=['SELECT 기초','조건과 범위','집계와 그룹','JOIN과 서브쿼리','ABAP 7.4 문법','결과 처리','성능과 코드 리뷰'];
   const templates=[
     {topic:'SELECT 기초',level:'기초',title:'필요한 열만 선택하기',table:'SFLIGHT',cols:['CARRID','CONNID','FLDATE','PRICE','CURRENCY'],hints:['SELECT 뒤에는 반환할 DB 열 이름을 쉼표로 나열합니다.','SFLIGHT에서 CARRID, CONNID, FLDATE를 골라 결과 내부 테이블에 담으세요.','SELECT CARRID, CONNID, FLDATE FROM SFLIGHT INTO TABLE @GT_DATA.'],answer:'SELECT CARRID, CONNID, FLDATE\n  FROM SFLIGHT\n  INTO TABLE @GT_DATA.',check:c=>{let n=norm(c);return [has(n,'SELECT'),has(n,'FROM SFLIGHT'),['CARRID','CONNID','FLDATE'].every(x=>n.includes(x)),has(n,'INTO TABLE @GT_DATA')]} ,req:'SFLIGHT에서 CARRID, CONNID, FLDATE 열만 조회해 GT_DATA 내부 테이블에 저장하세요. New Open SQL의 쉼표 구분과 @ 호스트 표기를 사용하세요.',run:()=>DATA.SFLIGHT.map(x=>({CARRID:x.CARRID,CONNID:x.CONNID,FLDATE:x.FLDATE}))},
     {topic:'조건과 범위',level:'기초',title:'호스트 변수로 조건 걸기',table:'SFLIGHT',cols:['CARRID','CONNID','PRICE','CURRENCY'],hints:['ABAP 프로그램의 변수는 SQL 안에서 @를 붙입니다. DB 열 이름에는 @를 붙이지 않습니다.','항공사 코드는 CARRID 열, ABAP 변수는 LV_CARRID입니다.','WHERE CARRID = @LV_CARRID 조건을 추가하세요.'],answer:'SELECT CARRID, CONNID, PRICE, CURRENCY\n  FROM SFLIGHT\n  WHERE CARRID = @LV_CARRID\n  INTO TABLE @GT_DATA.',check:c=>{let n=norm(c);return [has(n,'SELECT'),has(n,'FROM SFLIGHT'),n.includes('CARRID = @LV_CARRID'),has(n,'INTO TABLE @GT_DATA') ]},req:'ABAP 변수 LV_CARRID 값과 같은 항공편만 조회하세요. DB 열과 호스트 변수를 올바르게 구분하고 CARRID, CONNID, PRICE, CURRENCY만 GT_DATA에 담으세요.',run:(p)=>DATA.SFLIGHT.filter(x=>x.CARRID===p.carr).map(x=>({CARRID:x.CARRID,CONNID:x.CONNID,PRICE:x.PRICE,CURRENCY:x.CURRENCY}))},
@@ -50,8 +76,7 @@
     AND CONNID IN @S_CONNID
   ORDER BY CARRID, CONNID, FLDATE
   INTO CORRESPONDING FIELDS OF TABLE @GT_DATA.`;
-  // 마지막 배포 버전과 비교해, 사용자가 직접 편집하지 않은 기본 코드만 안전하게 갱신합니다.
-  const previousDefaultProjectCode=`REPORT ZABAP_F05_ZMM001.
+  const starterCode=`REPORT ZABAP_F05_ZMM001.
 
 "기본 조회: 선택 범위로 항공편을 읽고 정렬합니다.
 SELECT CARRID, CONNID, FLDATE, PRICE, CURRENCY, PLANETYPE, SEATSMAX, SEATSOCC
@@ -92,273 +117,13 @@ SELECT C~CARRID, C~CARRNAME, F~CONNID, F~FLDATE, F~PRICE, F~CURRENCY
   ORDER BY C~CARRID, F~CONNID, F~FLDATE
   INTO TABLE @DATA(GT_JOINED)
   UP TO 100 ROWS.`;
-
-  // SFLIGHT/SCARR 예제는 선언부, 선택 화면, 각 SELECT 실습을 한 보고서로 모읍니다.
-  const starterCode=`REPORT ZABAP_F05_ZMM001.
-
-"조회 결과 한 행의 구조입니다. SELECT 목록과 필드 이름을 맞춰 사용합니다.
-TYPES: BEGIN OF TY_DATA,
-         CARRID    TYPE SFLIGHT-CARRID,
-         CONNID    TYPE SFLIGHT-CONNID,
-         FLDATE    TYPE SFLIGHT-FLDATE,
-         PRICE     TYPE SFLIGHT-PRICE,
-         CURRENCY  TYPE SFLIGHT-CURRENCY,
-         PLANETYPE TYPE SFLIGHT-PLANETYPE,
-         SEATSMAX  TYPE SFLIGHT-SEATSMAX,
-         SEATSOCC  TYPE SFLIGHT-SEATSOCC,
-       END OF TY_DATA.
-
-"GT_DATA는 여러 행을 보관하고, GS_DATA는 한 행씩 처리합니다.
-DATA: GT_DATA TYPE TABLE OF TY_DATA,
-      GS_DATA TYPE TY_DATA.
-
-"실행 화면에서 항공사와 항공편 번호의 범위를 입력합니다.
-SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
-  SELECT-OPTIONS:
-    S_CARRID FOR GS_DATA-CARRID,
-    S_CONNID FOR GS_DATA-CONNID.
-
-  "SELECT SINGLE 실습에서 사용할 항공사 코드입니다.
-  PARAMETERS P_CARR TYPE SCARR-CARRID DEFAULT 'LH'.
-SELECTION-SCREEN END OF BLOCK B1.
-
-"라디오 버튼으로 실행할 SELECT 예제를 하나 고릅니다.
-SELECTION-SCREEN BEGIN OF BLOCK B2 WITH FRAME TITLE TEXT-002.
-  PARAMETERS:
-    P_BASIC  RADIOBUTTON GROUP G1 DEFAULT 'X',
-    P_WHERE  RADIOBUTTON GROUP G1,
-    P_SINGLE RADIOBUTTON GROUP G1,
-    P_AGGR   RADIOBUTTON GROUP G1,
-    P_JOIN   RADIOBUTTON GROUP G1.
-SELECTION-SCREEN END OF BLOCK B2.
-
-START-OF-SELECTION.
-
-  "1. 기본 SELECT: 선택 범위에 해당하는 항공편을 최대 100건 조회합니다.
-  IF P_BASIC = 'X'.
-    SELECT CARRID,
-           CONNID,
-           FLDATE,
-           PRICE,
-           CURRENCY,
-           PLANETYPE,
-           SEATSMAX,
-           SEATSOCC
-      FROM SFLIGHT
-      WHERE CARRID IN @S_CARRID
-        AND CONNID IN @S_CONNID
-      ORDER BY CARRID, CONNID, FLDATE
-      INTO CORRESPONDING FIELDS OF TABLE @GT_DATA
-      UP TO 100 ROWS.
-
-    IF GT_DATA IS INITIAL.
-      WRITE: / '조회된 항공편이 없습니다.'.
-    ELSE.
-      LOOP AT GT_DATA INTO GS_DATA.
-        WRITE: / GS_DATA-CARRID,
-                 GS_DATA-CONNID,
-                 GS_DATA-FLDATE,
-                 GS_DATA-PRICE,
-                 GS_DATA-CURRENCY,
-                 GS_DATA-PLANETYPE.
-      ENDLOOP.
-
-      WRITE: / '조회 건수:', LINES( GT_DATA ).
-    ENDIF.
-
-  "2. 열 비교: 예약 좌석이 최대 좌석보다 적은 항공편만 조회합니다.
-  ELSEIF P_WHERE = 'X'.
-    SELECT F~CARRID,
-           F~CONNID,
-           F~FLDATE,
-           F~PRICE,
-           F~CURRENCY,
-           F~PLANETYPE,
-           F~SEATSMAX,
-           F~SEATSOCC
-      FROM SFLIGHT AS F
-      WHERE F~CARRID IN @S_CARRID
-        AND F~CONNID IN @S_CONNID
-        AND F~SEATSOCC < F~SEATSMAX
-      ORDER BY F~CARRID, F~CONNID, F~FLDATE
-      INTO CORRESPONDING FIELDS OF TABLE @GT_DATA
-      UP TO 100 ROWS.
-
-    IF GT_DATA IS INITIAL.
-      WRITE: / '남은 좌석이 있는 항공편이 없습니다.'.
-    ELSE.
-      LOOP AT GT_DATA INTO GS_DATA.
-        WRITE: / GS_DATA-CARRID,
-                 GS_DATA-CONNID,
-                 GS_DATA-FLDATE,
-                 GS_DATA-SEATSOCC,
-                 '/',
-                 GS_DATA-SEATSMAX.
-      ENDLOOP.
-
-      WRITE: / '조회 건수:', LINES( GT_DATA ).
-    ENDIF.
-
-  "3. SELECT SINGLE: SCARR의 키 CARRID로 항공사 한 행을 찾습니다.
-  ELSEIF P_SINGLE = 'X'.
-    SELECT SINGLE CARRID,
-                  CARRNAME,
-                  CURRCODE
-      FROM SCARR
-      WHERE CARRID = @P_CARR
-      INTO @DATA(GS_CARRIER).
-
-    "SELECT 직후 sy-subrc를 확인해 조회 성공 여부를 판단합니다.
-    IF SY-SUBRC = 0.
-      WRITE: / GS_CARRIER-CARRID,
-               GS_CARRIER-CARRNAME,
-               GS_CARRIER-CURRCODE.
-    ELSE.
-      WRITE: / '해당 항공사 코드가 SCARR에 없습니다.'.
-    ENDIF.
-
-  "4. 집계: 항공사별 운항 건수와 예약 좌석 합계를 계산합니다.
-  ELSEIF P_AGGR = 'X'.
-    SELECT CARRID,
-           COUNT( * ) AS FLIGHT_COUNT,
-           SUM( SEATSOCC ) AS TOTAL_OCCUPIED
-      FROM SFLIGHT
-      WHERE CARRID IN @S_CARRID
-        AND CONNID IN @S_CONNID
-      GROUP BY CARRID
-      ORDER BY CARRID
-      INTO TABLE @DATA(GT_TOTALS).
-
-    IF GT_TOTALS IS INITIAL.
-      WRITE: / '집계할 항공편이 없습니다.'.
-    ELSE.
-      LOOP AT GT_TOTALS INTO DATA(GS_TOTAL).
-        WRITE: / GS_TOTAL-CARRID,
-                 GS_TOTAL-FLIGHT_COUNT,
-                 GS_TOTAL-TOTAL_OCCUPIED.
-      ENDLOOP.
-    ENDIF.
-
-  "5. INNER JOIN: 항공사 이름과 항공편 정보를 함께 조회합니다.
-  ELSEIF P_JOIN = 'X'.
-    SELECT C~CARRID,
-           C~CARRNAME,
-           F~CONNID,
-           F~FLDATE,
-           F~PRICE,
-           F~CURRENCY
-      FROM SCARR AS C
-      INNER JOIN SFLIGHT AS F
-        ON C~CARRID = F~CARRID
-      WHERE F~CARRID IN @S_CARRID
-        AND F~CONNID IN @S_CONNID
-      ORDER BY C~CARRID, F~CONNID, F~FLDATE
-      INTO TABLE @DATA(GT_JOINED)
-      UP TO 100 ROWS.
-
-    IF GT_JOINED IS INITIAL.
-      WRITE: / 'JOIN 결과가 없습니다.'.
-    ELSE.
-      LOOP AT GT_JOINED INTO DATA(GS_JOINED).
-        WRITE: / GS_JOINED-CARRID,
-                 GS_JOINED-CARRNAME,
-                 GS_JOINED-CONNID,
-                 GS_JOINED-FLDATE,
-                 GS_JOINED-PRICE,
-                 GS_JOINED-CURRENCY.
-      ENDLOOP.
-
-      WRITE: / '조회 건수:', LINES( GT_JOINED ).
-    ENDIF.
-  ENDIF.`;
-
-  // SBOOK 예제는 조건부 집계와 선택 범위를 설명하는 독립 보고서입니다.
-  const sbookStarterCode=`REPORT ZQUIZ_F05_07.
-
-"조회 결과 한 행: 항공편별 흡연자와 비흡연자 예약 건수입니다.
-TYPES: BEGIN OF TY_CONNECTION,
-         CARRID     TYPE SBOOK-CARRID,
-         CONNID     TYPE SBOOK-CONNID,
-         SMOKER_CNT TYPE INT8,
-         NONSMK_CNT TYPE INT8,
-       END OF TY_CONNECTION.
-
-"집계 결과 여러 행을 저장할 내부 테이블입니다.
-DATA GT_CONNECTIONS TYPE TABLE OF TY_CONNECTION.
-
-"선택 화면과 기본 날짜 계산에 사용할 변수입니다.
-DATA: GV_CARRID    TYPE SBOOK-CARRID,
-      GV_FLDATE    TYPE SBOOK-FLDATE,
-      GV_DATE_FROM TYPE SBOOK-FLDATE,
-      GV_DATE_TO   TYPE SBOOK-FLDATE.
-
-"항공사와 출발 날짜의 선택 범위를 제공합니다.
-SELECT-OPTIONS:
-  SO_CAR FOR GV_CARRID,
-  SO_FDT FOR GV_FLDATE.
-
-"기본값: DL부터 LH까지, 그리고 지난달 전체 날짜를 선택합니다.
-INITIALIZATION.
-  SO_CAR-SIGN   = 'I'.
-  SO_CAR-OPTION = 'BT'.
-  SO_CAR-LOW    = 'DL'.
-  SO_CAR-HIGH   = 'LH'.
-  APPEND SO_CAR.
-
-  "이번 달 1일에서 하루를 빼면 지난달 마지막 날이 됩니다.
-  GV_DATE_TO = SY-DATUM.
-  GV_DATE_TO+6(2) = '01'.
-  GV_DATE_TO = GV_DATE_TO - 1.
-
-  "지난달 마지막 날의 일을 1일로 바꾸어 시작일을 만듭니다.
-  GV_DATE_FROM = GV_DATE_TO.
-  GV_DATE_FROM+6(2) = '01'.
-
-  SO_FDT-SIGN   = 'I'.
-  SO_FDT-OPTION = 'BT'.
-  SO_FDT-LOW    = GV_DATE_FROM.
-  SO_FDT-HIGH   = GV_DATE_TO.
-  APPEND SO_FDT.
-
-START-OF-SELECTION.
-  "항공사·항공편별로 흡연 여부를 나누어 건수를 셉니다.
-  SELECT CARRID,
-         CONNID,
-         SUM( CASE
-                WHEN SMOKER = 'X' THEN 1
-                ELSE 0
-              END ) AS SMOKER_CNT,
-         SUM( CASE
-                WHEN SMOKER = ' ' THEN 1
-                ELSE 0
-              END ) AS NONSMK_CNT
-    FROM SBOOK
-    WHERE CARRID IN @SO_CAR
-      AND FLDATE IN @SO_FDT
-    GROUP BY CARRID, CONNID
-    ORDER BY CARRID, CONNID
-    INTO CORRESPONDING FIELDS OF TABLE @GT_CONNECTIONS.
-
-  "각 CASE는 예약 한 건을 해당 그룹에 1 또는 0으로 표시하고,
-  "SUM이 그 표시를 더해 그룹별 인원수를 만듭니다.
-  CL_DEMO_OUTPUT=>DISPLAY( GT_CONNECTIONS ).`;
-
-  const defaultProject={id:'project-zmm001',name:'ZABAP_F05_ZMM001',description:'선언부와 선택 화면부터 SELECT, WHERE, 집계, JOIN까지 살펴보는 SFLIGHT 예제',tables:['SFLIGHT','SCARR'],primaryTable:'SFLIGHT',fields:['CARRID','CONNID','FLDATE','PRICE','CURRENCY','PLANETYPE','SEATSMAX','SEATSOCC'],resultVar:'GT_DATA',conditionVars:['S_CARRID','S_CONNID'],source:starterCode};
-  const defaultSbookProject={id:'project-sbook-quiz',name:'ZQUIZ_F05_07',description:'SBOOK 선택 범위와 CASE/SUM 조건부 집계를 익히는 예제',tables:['SBOOK'],primaryTable:'SBOOK',fields:['CARRID','CONNID','FLDATE','SMOKER','SMOKER_CNT','NONSMK_CNT'],resultVar:'GT_CONNECTIONS',conditionVars:['SO_CAR','SO_FDT'],source:sbookStarterCode};
-
-  // 첫 방문에는 두 예제를 모두 넣고, 기존 브라우저에는 없는 예제만 추가합니다.
-  if(!Array.isArray(state.projects)||!state.projects.length){state.projects=[{...defaultProject},{...defaultSbookProject}];state.selectedProjects=['project-zmm001','project-sbook-quiz'];state.activeProject='project-zmm001';persist()}
-  else {
-    let changed=false;
-    const untouchedDefault=state.projects.find(p=>p.id==='project-zmm001'&&(p.source===previousStarterCode||p.source===previousDefaultProjectCode));
-    if(untouchedDefault){Object.assign(untouchedDefault,defaultProject);changed=true}
-    if(!state.projects.some(p=>p.id===defaultSbookProject.id)){state.projects.push({...defaultSbookProject});changed=true}
-    if(changed)persist();
-  }
+  const defaultProject={id:'project-zmm001',name:'ZABAP_F05_ZMM001',description:'SFLIGHT 조회, SCARR 단건 조회, 집계와 JOIN 실습',tables:['SFLIGHT','SCARR'],primaryTable:'SFLIGHT',fields:['CARRID','CONNID','FLDATE','PRICE','CURRENCY','PLANETYPE','SEATSMAX','SEATSOCC'],resultVar:'GT_DATA',conditionVars:['S_CARRID','S_CONNID'],source:starterCode};
+  if(!Array.isArray(state.projects)||!state.projects.length){state.projects=[{...defaultProject}];state.selectedProjects=['project-zmm001'];state.activeProject='project-zmm001';persist()}
+  else {const untouchedDefault=state.projects.find(p=>p.id==='project-zmm001'&&p.source===previousStarterCode);if(untouchedDefault){Object.assign(untouchedDefault,defaultProject);persist()}}
   if(!Array.isArray(state.selectedProjects))state.selectedProjects=[state.projects[0].id];
   const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  function loadState(){try{return {...defaults,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return {...defaults}}}
-  function persist(){localStorage.setItem(KEY,JSON.stringify(state));$('#wrong-count').textContent=(state.wrong||[]).length}
+  function loadState(){try{const st={...defaults,...JSON.parse(localStorage.getItem(KEY)||'{}')};if(!st.topicsV2){st.topics=[...new Set([...(st.topics||[]),...TOPICS])];st.topicsV2=true}return st}catch{return {...defaults}}}
+  function persist(){localStorage.setItem(KEY,JSON.stringify(state));const wc=document.querySelector('#wrong-count');if(wc)wc.textContent=(state.wrong||[]).length}
   function norm(s){return s.toUpperCase().replace(/"[^\n]*"|'[^']*'/g,' ').replace(/\s+/g,' ').replace(/\s*([,.()=<>])\s*/g,'$1').trim()}
   function has(s,part){return s.includes(part)}
   function seed(){const n=crypto.getRandomValues(new Uint32Array(1))[0];return n.toString(16).padStart(8,'0')}
@@ -366,8 +131,9 @@ START-OF-SELECTION.
   function makeProblem(seedValue, desiredTitle){
     if(desiredTitle){let old=(state.wrong||[]).find(x=>x.seed===seedValue);if(old&&old.projectSnapshot)return window.openSqlProjectProblem.build(old.projectSnapshot,seedValue,old.variant);if(old&&old.projectId){let p=state.projects.find(x=>x.id===old.projectId);if(p)return window.openSqlProjectProblem.build(p,seedValue,old.variant)}}
     let selected=(state.selectedProjects||[]).map(id=>state.projects.find(p=>p.id===id)).filter(Boolean);
-    if(selected.length){let options=selected.flatMap(project=>window.openSqlProjectProblem.variants(project).map(variant=>({project,variant})));let byLevel=state.level==='전체'?options:options.filter(option=>window.openSqlProjectProblem.level(option.project,seedValue,option.variant)===state.level);if(byLevel.length)options=byLevel;let recent=(state.recent||[]).slice(0,12);let fresh=options.filter(option=>!recent.some(item=>item.projectId===option.project.id&&item.variant===option.variant));let pool=fresh.length?fresh:options;let picked=pool[parseInt(seedValue.slice(0,6),16)%pool.length];return window.openSqlProjectProblem.build(picked.project,seedValue,picked.variant)}
-    let available=templates.filter(t=>(state.topics||TOPICS).includes(t.topic)&&(state.level==='전체'||t.level===state.level)&&/^SELECT\b/i.test(t.answer)&&!/^\s*(?:IF|UPDATE|DELETE|INSERT|MODIFY)\b/i.test(t.answer)&&!/\bWRITE\b/i.test(t.answer));if(!available.length)available=templates.filter(t=>/^SELECT\b/i.test(t.answer)&&!/^\s*(?:IF|UPDATE|DELETE|INSERT|MODIFY)\b/i.test(t.answer)&&!/\bWRITE\b/i.test(t.answer));let idx=parseInt(seedValue.slice(-6),16)%available.length;let t=desiredTitle?templates.find(x=>x.title===desiredTitle)||available[idx]:available[idx];let prior=(state.recent||[]).slice(0,12);if(!desiredTitle&&prior.length&&prior.every(x=>x.template===t.title)&&available.length>1)t=available[(available.indexOf(t)+1)%available.length];let sfl=DATA.SFLIGHT[parseInt(seedValue.slice(0,2),16)%DATA.SFLIGHT.length];return {...t,id:'SQL-'+seedValue.slice(0,6).toUpperCase(),seed:seedValue,created:new Date().toISOString(),params:{carr:sfl.CARRID},hintLevel:0}
+    if(selected.length){const PP=window.openSqlProjectProblem;let options=selected.flatMap(project=>PP.variants(project).map(variant=>({project,variant,meta:PP.meta(project,variant)})));let topics=state.topics||TOPICS;let byTopic=options.filter(o=>topics.includes(o.meta.topic));if(byTopic.length)options=byTopic;let byLevel=state.level==='전체'?options:options.filter(o=>o.meta.level===state.level);if(byLevel.length)options=byLevel;let recent=(state.recent||[]).slice(0,12);let fresh=options.filter(o=>!recent.some(item=>item.projectId===o.project.id&&item.variant===o.variant));let pool=fresh.length?fresh:options;let own=pool.filter(o=>/^source_/.test(o.variant));if(own.length&&parseInt(seedValue.slice(6,8),16)%100<35)pool=own;let picked=pool[parseInt(seedValue.slice(0,6),16)%pool.length];return PP.build(picked.project,seedValue,picked.variant)}
+    const isRunnableSelect=t=>/^\s*SELECT\b/i.test(t.answer)&&window.openSqlRunner.run(t.answer,{data:DATA}).ok;
+    let available=templates.filter(t=>(state.topics||TOPICS).includes(t.topic)&&(state.level==='전체'||t.level===state.level)&&isRunnableSelect(t));if(!available.length)available=templates.filter(isRunnableSelect);let idx=parseInt(seedValue.slice(-6),16)%available.length;let t=desiredTitle?templates.find(x=>x.title===desiredTitle&&isRunnableSelect(x))||available[idx]:available[idx];let prior=(state.recent||[]).slice(0,12);if(!desiredTitle&&prior.length&&prior.every(x=>x.template===t.title)&&available.length>1)t=available[(available.indexOf(t)+1)%available.length];let sfl=DATA.SFLIGHT[parseInt(seedValue.slice(0,2),16)%DATA.SFLIGHT.length];return {...t,id:'SQL-'+seedValue.slice(0,6).toUpperCase(),seed:seedValue,created:new Date().toISOString(),params:{carr:sfl.CARRID},hintLevel:0}
   }
   function newProblem(){current=makeProblem(seed());simulation=null;state.recent=[{template:current.title,seed:current.seed,projectId:current.projectId||null,variant:current.variant||null},...(state.recent||[])].slice(0,12);persist();result=null;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view==='practice'));view='practice';render()}
   function changeView(v){view=v;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===v));render()}
@@ -384,60 +150,34 @@ START-OF-SELECTION.
     let right=project?'<span class="date-chip">프로젝트: '+esc(project.name)+'</span>':'';
     let html=header('SQL SANDBOX · 06','SQL 조각 실행','ABAP SELECT 구문을 붙여 넣고 가상 데이터 결과를 바로 확인하세요.',right);
     html+='<div class="sql-lab-layout"><section class="card sql-lab-card"><div class="card-head"><div><h2>가상 SQL 편집기</h2><span class="problem-desc">SELECT ... FROM만 입력해도 실행할 수 있습니다.</span></div><button class="primary-btn" id="run-lab-query">▶ 실행</button></div>';
-    html+='<div class="quick-insert"><span>예제</span><button data-lab-example="basic">행 조회</button><button data-lab-example="where">WHERE 필터</button><button data-lab-example="group">GROUP BY 집계</button><button data-lab-example="order">ORDER BY 정렬</button></div>';
+    html+='<div class="quick-insert"><span>예제</span><button data-lab-example="basic">행 조회</button><button data-lab-example="where">WHERE 필터</button><button data-lab-example="group">GROUP BY 집계</button><button data-lab-example="order">ORDER BY 정렬</button><button data-lab-example="join">JOIN</button><button data-lab-example="notexists">NOT EXISTS</button><button data-lab-example="case">CASE</button></div>';
     html+='<textarea id="sql-lab-input" class="sql-lab-source" spellcheck="false">'+esc(labDraft)+'</textarea><div class="editor-foot"><span>New Open SQL 스타일 · 조회만 모의 실행</span><span>가상 데이터 · SAP 미연결</span></div>'+(labOutput?simulationHtml(labOutput):'')+'</section>';
-    html+='<aside class="card sql-lab-help"><h2>실행할 수 있는 구문</h2><ul><li>SELECT 열 목록 / FROM 허용 테이블</li><li>WHERE 비교, AND/OR, IN, LIKE, IS NULL</li><li>DISTINCT, COUNT·SUM·AVG·MIN·MAX</li><li>GROUP BY, ORDER BY, UP TO n ROWS</li></ul><div class="safe-banner">대상: SCARR, SPFLI, SFLIGHT, SBOOK 및 프로젝트에 등록한 가상 스키마. DB 변경 구문과 SAP 연결은 지원하지 않습니다.</div><div class="schema-mini"><strong>예시</strong><code>SELECT CARRID, COUNT(*) AS FLIGHT_COUNT<br>FROM SFLIGHT<br>GROUP BY CARRID</code></div></aside></div>';
+    html+='<aside class="card sql-lab-help"><h2>실행할 수 있는 구문</h2><ul><li>SELECT 열 목록 / FROM 허용 테이블 / FROM … FIELDS</li><li>INNER · LEFT OUTER JOIN (여러 개)</li><li>WHERE 비교, AND/OR/NOT, 괄호, IN, LIKE, BETWEEN, IS [NOT] NULL·INITIAL</li><li>EXISTS · NOT EXISTS · IN · 스칼라 서브쿼리</li><li>DISTINCT, COUNT·SUM·AVG·MIN·MAX, GROUP BY, HAVING</li><li>CASE, 산술식, COALESCE, ABS, CEIL, FLOOR, ROUND</li><li>ORDER BY [PRIMARY KEY], UP TO n ROWS</li></ul><div class="safe-banner">대상: SCARR, SPFLI, SFLIGHT, SBOOK 및 프로젝트에 등록한 가상 스키마. DB 변경 구문과 SAP 연결은 지원하지 않습니다.</div><div class="schema-mini"><strong>예시</strong><code>SELECT CARRID, COUNT(*) AS FLIGHT_COUNT<br>FROM SFLIGHT<br>GROUP BY CARRID</code></div></aside></div>';
     return html;
   }
   function runLabQuery(){labDraft=$('#sql-lab-input').value;let project=state.projects.find(p=>p.id===state.activeProject)||null;labOutput=window.openSqlRunner.run(labDraft,{data:DATA,project});render()}
   function projects(){let p=state.projects.find(x=>x.id===state.activeProject)||state.projects[0];let code=esc(p.source||'');return `${header('PROJECTS · 02','프로젝트 코드','프로젝트 코드를 등록하면 테이블·필드·변수에 맞춰 연습 문제를 만듭니다.',`<button class="primary-btn" id="add-project">＋ 프로젝트 추가</button>`)}<section class="grid" style="grid-template-columns:minmax(260px,.78fr) minmax(0,1.5fr);align-items:start"><div class="card"><div class="card-head"><h2>출제 프로젝트 풀</h2><span class="tag">${(state.selectedProjects||[]).length}개 선택</span></div><p class="problem-desc">하나만 체크하면 그 프로젝트를 기준으로 출제하고, 여러 개를 체크하면 선택한 프로젝트 중 무작위로 골라 출제합니다.</p>${state.projects.map(x=>`<div class="project-row"><label><input type="checkbox" data-project-select="${esc(x.id)}" ${(state.selectedProjects||[]).includes(x.id)?'checked':''}><span><b>${esc(x.name||'이름 없는 프로젝트')}</b><small>${esc((x.tables||[]).join(', ')||'테이블을 코드에서 읽어 주세요')}</small></span></label><button class="text-button" data-edit-project="${esc(x.id)}">편집</button></div>`).join('')}</div><div class="card"><div class="card-head"><h2>프로젝트 설정 및 전체 코드</h2><span class="tag">${esc(p.id)}</span></div><div class="project-form"><label>프로젝트 이름<input id="project-name" class="input" value="${esc(p.name)}"></label><label>설명<input id="project-desc" class="input" value="${esc(p.description||'')}"></label><div class="project-form-row"><label>기본 테이블<input id="project-table" class="input" value="${esc(p.primaryTable||'')}"></label><label>테이블 목록<input id="project-tables" class="input" value="${esc((p.tables||[]).join(', '))}"></label></div><label>문제에서 사용할 필드 (쉼표로 구분)<input id="project-fields" class="input" value="${esc((p.fields||[]).join(', '))}"></label><div class="project-form-row"><label>결과 내부 테이블 변수<input id="project-result" class="input" value="${esc(p.resultVar||'GT_DATA')}"></label><label>조건 호스트 변수<input id="project-vars" class="input" value="${esc((p.conditionVars||[]).join(', '))}"></label></div><div class="project-code-head"><b>프로젝트 전체 코드</b><button class="secondary-btn" id="analyze-project">코드에서 필드·테이블 읽기</button></div><textarea id="project-source" class="project-source" spellcheck="false" placeholder="ABAP 프로그램 코드를 붙여 넣으세요.">${code}</textarea><div class="project-actions"><span class="problem-desc">코드는 현재 브라우저에만 저장됩니다.</span><div><button class="ghost-btn" id="delete-project">프로젝트 삭제</button> <button class="primary-btn" id="save-project">저장</button></div></div></div></div></section><div class="safe-banner">코드 분석은 SELECT/FROM/WHERE/INTO 주변의 이름을 추정합니다. 자동 추출 결과를 확인해 주세요. ABAP 의미 분석이나 실제 컴파일은 수행하지 않습니다.</div>`}
-  function practice(){if(!current)current=makeProblem(seed());let t=current;let schema=t.submissionType==='abap'?'<code>ABAP 자료형·선언</code>':t.table.includes('+')?'<code>SCARR AS C · SFLIGHT AS F</code>':t.table.includes('가상')?'<code>ZLAB_BOOKING: ID, CARRID, NOTE</code>':`<code>${t.table}: ${t.cols.join(', ')}</code>`;let initial=current.draft||'';return `${header('PRACTICE · '+t.id,t.title,`요구사항을 읽고 코드를 작성해 제출하세요. · seed ${t.seed}`,`<button class="ghost-btn" id="practice-next">새 문제 ↗</button>`)}
-    <div class="practice-layout"><div><section class="card problem-card"><div class="problem-top"><div class="tag-row"><span class="tag blue">${t.topic}</span><span class="tag">${t.level}</span><span class="tag">예상 5분</span></div><span class="tag">${t.table}</span></div><h2>${t.req}</h2><div class="problem-desc">${t.submissionType==='abap'?'자료형 정의와 실제 데이터 변수를 구분해 작성해 보세요.':'테이블의 데이터 소스 열과 ABAP 변수를 구분하고, 조회 대상과 범위를 명확히 적어 보세요.'}</div>${t.snippet?`<div class="safe-banner"><b>수정할 SQL</b><pre class="wrong-code">${esc(t.snippet)}</pre></div>`:""}${t.note?`<div class="safe-banner">${esc(t.note)}</div>`:""}${Object.keys(t.bindings||{}).length?`<div class="problem-desc">호스트 변수: ${Object.entries(t.bindings).map(([k,v])=>`<code>@${esc(k)} = ${esc(JSON.stringify(v))}</code>`).join(" · ")}</div>`:""}<div class="schema-mini"><strong>이번 문제의 스키마</strong>${schema}</div></section>
-    <section class="card editor-card"><div class="editor-header"><b>▧ &nbsp;ABAP 편집기</b><span>Standard ABAP 7.62 · 제한된 문법 채점</span></div>${t.submissionType==='abap'?'': '<div class="quick-insert" id="quick-insert"><span>빠른 삽입</span><button data-snippet="select">SELECT 틀</button><button data-snippet="where">WHERE 조건</button><button data-snippet="into">INTO TABLE</button><button data-snippet="if">IF 방어</button></div>'}<div class="editor-wrap"><textarea id=\"code-input\" spellcheck="false" autocomplete="off" placeholder="${t.submissionType==='abap'?'ABAP 선언 코드를 입력하세요.':'SELECT CARRID, CONNID\n  FROM SFLIGHT\n  INTO TABLE @GT_DATA.'}">${esc(initial)}</textarea><div id="completion-list" class="completion-list" hidden></div></div><div class="editor-foot"><span>↑↓ 선택 · Tab/Enter 삽입 · Esc 닫기 · Ctrl+Space 자동완성 · Ctrl+Enter 제출 · ${t.submissionType==='abap'?'ABAP 선언 문법을 확인해 제출':'SELECT ... FROM만 입력해도 가상 실행 가능'}</span><span><code>SELECT</code> · <code>FROM</code> · <code>WHERE</code> · <code>INTO</code></span></div></section>
-    <div class="practice-actions"><button class="ghost-btn" id="reset-code">비우기</button><div class="action-right"><button class="secondary-btn" id="save-review">☆ 나중에 복습</button>${t.submissionType==='abap'?'': '<button class="secondary-btn" id="run-query">▶ 가상 실행</button>'}<button class="primary-btn" id="submit-answer">답안 제출 →</button></div></div>${simulation?simulationHtml(simulation):''}${result?resultHtml(result,t):''}</div>
+  function practice(){if(!current)current=makeProblem(seed());let t=current;let schema=t.schemaText?`<code>${esc(t.schemaText)}</code>`:t.table.includes('+')?'<code>SCARR AS C · SFLIGHT AS F</code>':t.table.includes('가상')?'<code>ZLAB_BOOKING: ID, CARRID, NOTE</code>':`<code>${t.table}: ${t.cols.join(', ')}</code>`;let initial=current.draft||'';return `${header('PRACTICE · '+t.id,t.title,`요구사항을 읽고 코드를 작성해 제출하세요. · seed ${t.seed}`,`<button class="ghost-btn" id="practice-next">새 문제 ↗</button>`)}
+    <div class="practice-layout"><div><section class="card problem-card"><div class="problem-top"><div class="tag-row"><span class="tag blue">${t.topic}</span><span class="tag">${t.level}</span><span class="tag">${esc(t.kind||'작성')}</span><span class="tag">예상 5분</span></div><span class="tag">${t.table}</span></div><h2>${t.req}</h2>${t.snippet?`<div class="answer-block" style="margin:0 0 12px">${esc(t.snippet)}</div>`:''}${t.preview?`<div class="run-result">${tableHtml(t.preview)}</div>`:''}<div class="problem-desc">테이블의 데이터 소스 열과 ABAP 변수를 구분하고, 조회 대상과 범위를 명확히 적어 보세요.</div><div class="schema-mini"><strong>이번 문제의 스키마</strong>${schema}</div></section>
+    <section class="card editor-card"><div class="editor-header"><b>▧ &nbsp;ABAP 편집기</b><span>Standard ABAP 7.62 · 제한된 문법 채점</span></div><div class="quick-insert" id="quick-insert"><span>빠른 삽입</span><button data-snippet="select">SELECT 틀</button><button data-snippet="where">WHERE 조건</button><button data-snippet="into">INTO TABLE</button></div><div class="editor-wrap"><textarea id="code-input" spellcheck="false" autocomplete="off" placeholder="SELECT CARRID, CONNID\n  FROM SFLIGHT\n  INTO TABLE @GT_DATA.">${esc(initial)}</textarea><div id="completion-list" class="completion-list" hidden></div></div><div class="editor-foot"><span>↑↓ 선택 · Tab/Enter 삽입 · Esc 닫기 · Ctrl+Enter 제출 · SELECT ... FROM만 입력해도 가상 실행 가능</span><span><code>SELECT</code> · <code>FROM</code> · <code>WHERE</code> · <code>INTO</code></span></div></section>
+    <div class="practice-actions"><button class="ghost-btn" id="reset-code">비우기</button><div class="action-right"><button class="secondary-btn" id="save-review">☆ 나중에 복습</button><button class="secondary-btn" id="run-query">▶ 가상 실행</button><button class="primary-btn" id="submit-answer">답안 제출 →</button></div></div>${simulation?simulationHtml(simulation):''}${result?resultHtml(result,t):''}</div>
     <aside class="practice-aside"><section class="card side-card"><h3>단계별 힌트</h3>${t.hints.map((h,i)=>`<div class="hint-step ${i<current.hintLevel?'':'locked'}"><span class="hint-num">${i+1}</span><span>${i<current.hintLevel?`<span class="hint-content">${esc(h)}</span>`:`<button data-hint="${i}">${i===current.hintLevel?'힌트 열기 →':'잠김'}</button>`}</span></div>`).join('')}</section><section class="card side-card"><h3>실행 모의</h3><div class="problem-desc">제출한 코드에서 지원하는 패턴만 가상 예제에 적용합니다.</div><div class="safe-banner">◉ &nbsp;실제 SAP 또는 데이터베이스에 연결되지 않습니다.</div></section></aside></div>`}
-  function runQuery(){let code=$('#code-input').value.trim();current.draft=code;let project=state.projects.find(p=>p.id===current.projectId)||state.projects.find(p=>p.id===state.activeProject)||null;simulation=window.openSqlRunner.run(code,{data:DATA,project,bindings:current.bindings||{}});render()}
-  function simulationHtml(r){return '<section class="card result-card '+(r.ok?'correct':'wrong')+'"><div class="result-title"><span class="icon">'+(r.ok?'▶':'!')+'</span>가상 ABAP Open SQL 실행</div><div class="result-body">'+(r.ok?'<div class="run-note">'+esc(r.note)+'</div>'+tableHtml(r.rows):'<p>'+esc(r.error)+'</p><div class="run-note">'+esc(r.note)+'</div>')+'</div></section>'}
-  function resultHtml(r,t){let cls=r.verdict==='정답'?'correct':r.verdict==='부분 정답'?'partial':r.verdict==='오답'?'wrong':'';let icon=r.verdict==='정답'?'✓':r.verdict==='부분 정답'?'◐':r.verdict==='오답'?'!':'?';return `<section class="card result-card ${cls}"><div class="result-title"><span class="icon">${icon}</span>${r.verdict} <span class="tag">${r.score}%</span></div><div class="result-body"><b>맞게 작성한 부분</b><ul>${r.good.length?r.good.map(x=>`<li>${esc(x)}</li>`).join(''):'<li>확인 가능한 요구사항을 찾지 못했습니다.</li>'}</ul>${r.missing.length?`<b>확인할 부분</b><ul>${r.missing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}<b>실무 리뷰</b><p>${esc(r.review)}</p>${t.submissionType==='abap'?'': '<b>가상 실행 결과</b><div class="run-result">${tableHtml(r.rows)}</div>'}<div style="display:flex;gap:8px;margin-top:13px"><button class="secondary-btn" id="show-answer">모범 답안 보기</button><button class="secondary-btn" id="review-again">복기 기록 쓰기</button></div>${r.showAnswer?`<div class="answer-block">${esc(t.answer)}</div><div class="run-note">SAP GUI에서 활성화 후 문법 검사(Ctrl+F2), 데이터가 있는지 확인한 뒤 실행하세요. 이 앱의 자동 평가는 제한된 패턴 검사입니다.</div>`:''}${r.reviewOpen?`<textarea id="reflection" class="input" style="width:100%;height:75px;margin-top:12px;padding:9px" placeholder="이번에 배운 점 / 헷갈린 점">${esc(r.reflection||'')}</textarea><button id="save-reflection" class="text-button">복기 저장</button>`:''}</div></section>`}
-  function tableHtml(rows){if(!rows||!rows.length)return '<div class="run-note">결과 행이 없습니다.</div>';let keys=Object.keys(rows[0]);return `<table class="run-table"><thead><tr>${keys.map(k=>`<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${keys.map(k=>`<td>${esc(row[k])}</td>`).join('')}</tr>`).join('')}</tbody></table><div class="run-note">${rows.length}개 행 · 브라우저 가상 데이터</div>`}
-  function evaluate(){let code=$('#code-input').value.trim();current.draft=code;let up=norm(code), checks=current.check(code),supported=current.submissionType==='abap'?/\b(TYPES|DATA|METHOD)\b/i.test(code):/\b(SELECT|UPDATE|DELETE|INSERT)\b/i.test(code);let good=[],missing=[];let labels=current.projectId?(current.criteria||['SELECT 사용',current.table+' 데이터 소스',...current.cols.map(x=>x+' 열 포함'),'결과 변수 @'+(current.resultVar||'GT_DATA')]):current.topic==='안전한 변경'?['가상 Z 테이블을 대상으로 함','변경 값이 호스트 변수로 표기됨','대상 행을 WHERE 키 조건으로 제한함','표준 테이블을 변경하지 않음']:current.topic==='JOIN과 서브쿼리'?['LEFT OUTER JOIN 사용','테이블 연결 조건을 ON에 명시','결과를 내부 테이블에 저장']:current.topic==='집계와 그룹'?['COUNT 집계 사용','SBOOK 데이터 소스 사용','집계 값을 ABAP 변수로 받음']:current.topic==='성능과 코드 리뷰'?['기준 내부 테이블 빈 값 방어','FOR ALL ENTRIES 입력 지정','키 비교 조건 포함','IF 블록 종료']:current.title.includes('결과 행 수')?['SFLIGHT 조회','내부 테이블 저장','sy-dbcnt 참조']:current.title.includes('열끼리')?['SFLIGHT 조회','점유 좌석과 최대 좌석 열을 비교','결과 저장']:current.title.includes('정렬')?['SFLIGHT 조회','가격 기준 정렬','최대 한 행으로 제한','내부 테이블 저장']:current.title.includes('选择')?[]:current.title.includes('선택 범위')?['SFLIGHT 조회','CARRID 선택 범위 IN 조건','결과 저장']:current.title.includes('호스트 변수')?['SFLIGHT 조회','CARRID 호스트 변수 비교','필요 열과 결과 저장']:['SELECT 사용','SFLIGHT 데이터 소스','요구된 열 선택','내부 테이블에 저장'];checks.forEach((ok,i)=>(ok?good:missing).push(labels[i]||`요구사항 ${i+1}`));let score=Math.round(checks.filter(Boolean).length/checks.length*100),verdict=score===100?'정답':score>0?'부분 정답':'오답';if(!supported){verdict='아직 평가할 수 없음';missing=['제출 코드에서 평가 가능한 SQL 구문을 찾지 못했습니다.'];score=0}let unsafe=/\b(UPDATE|DELETE|MODIFY|INSERT)\s+(SCARR|SPFLI|SFLIGHT|SBOOK)\b/i.test(code);if(unsafe){verdict='오답';score=0;good=[];missing=['표준 SAP 테이블 변경은 인정하지 않습니다. 가상 ZLAB_BOOKING만 변경 대상으로 사용하세요.']}let review=current.submissionType==='abap'?(missing.length?'선언한 이름, 자료형, TYPE TABLE OF와 LIKE LINE OF의 역할을 확인하세요.':'타입 정의와 실제 변수를 구분하고, 문제에서 요구한 범위에 맞게 선언했습니다.'):unsafe?'표준 테이블 변경 SQL은 허용하지 않습니다. 브라우저 가상 ZLAB_BOOKING만 대상으로 연습하세요.':missing.length?'DB 열에는 @를 붙이지 않고, ABAP 호스트 변수에는 @를 붙였는지 확인하세요. 조회 범위를 분명히 하고 필요한 열만 선택하는 습관을 유지하세요.':'요구사항의 데이터 소스와 결과 대상이 분명합니다. 실제 코드에서는 선택 범위가 비었을 때 조회 건수와 성능도 함께 확인하세요.';let rows=(!unsafe&&checks.some(Boolean)&&!current.topic.includes('안전한'))?current.run(current.params):current.topic==='안전한 변경'&&!unsafe&&checks.every(Boolean)?current.run():[];result={verdict,score,good,missing,review,rows,showAnswer:false,reflectionOpen:false};if(verdict!=='정답')saveWrong(code,result);let entry={id:current.id,title:current.title,topic:current.topic,verdict,date:new Date().toISOString(),seed:current.seed};state.history=[...(state.history||[]),entry];if(!(state.recent||[]).some(x=>x.seed===current.seed))state.recent=[{template:current.title,seed:current.seed,projectId:current.projectId||null,variant:current.variant||null},...(state.recent||[])].slice(0,12);let today=new Date().toDateString();if(state.lastStudy!==today){let y=new Date();y.setDate(y.getDate()-1);state.streak=state.lastStudy===y.toDateString()?(state.streak||0)+1:1;state.lastStudy=today}persist();render()}
+  function runQuery(){let code=$('#code-input').value.trim();current.draft=code;let project=state.projects.find(p=>p.id===current.projectId)||state.projects.find(p=>p.id===state.activeProject)||null;simulation=window.openSqlRunner.run(code,{data:DATA,project,bindings:current.bindings});render()}
+  function simulationHtml(r){return '<section class="card result-card '+(r.ok?'correct':'wrong')+'"><div class="result-title"><span class="icon">'+(r.ok?'▶':'!')+'</span>가상 SQL 실행</div><div class="result-body">'+(r.ok?'<div class="run-note">'+esc(r.note)+'</div>'+tableHtml(r.rows):'<p>'+esc(r.error)+'</p><div class="run-note">'+esc(r.note)+'</div>')+'</div></section>'}
+  function resultHtml(r,t){let cls=r.verdict==='정답'?'correct':r.verdict==='부분 정답'?'partial':r.verdict==='오답'?'wrong':'';let icon=r.verdict==='정답'?'✓':r.verdict==='부분 정답'?'◐':r.verdict==='오답'?'!':'?';return `<section class="card result-card ${cls}"><div class="result-title"><span class="icon">${icon}</span>${r.verdict} <span class="tag">${r.score}%</span></div><div class="result-body"><b>맞게 작성한 부분</b><ul>${r.good.length?r.good.map(x=>`<li>${esc(x)}</li>`).join(''):'<li>확인 가능한 요구사항을 찾지 못했습니다.</li>'}</ul>${r.missing.length?`<b>확인할 부분</b><ul>${r.missing.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}<b>실무 리뷰</b><p>${esc(r.review)}</p><b>가상 실행 결과</b><div class="run-result">${tableHtml(r.rows)}</div><div style="display:flex;gap:8px;margin-top:13px"><button class="secondary-btn" id="show-answer">모범 답안 보기</button><button class="secondary-btn" id="review-again">복기 기록 쓰기</button></div>${r.showAnswer?`<div class="answer-block">${esc(t.answer)}</div><div class="run-note">SAP GUI에서 활성화 후 문법 검사(Ctrl+F2), 데이터가 있는지 확인한 뒤 실행하세요. 이 앱의 자동 평가는 제한된 패턴 검사입니다.</div>`:''}${r.reviewOpen?`<textarea id="reflection" class="input" style="width:100%;height:75px;margin-top:12px;padding:9px" placeholder="이번에 배운 점 / 헷갈린 점">${esc(r.reflection||'')}</textarea><button id="save-reflection" class="text-button">복기 저장</button>`:''}</div></section>`}
+  function tableHtml(rows){if(!rows||!rows.length)return '<div class="run-note">조건에 맞는 조회 결과가 없습니다. WHERE 조건과 입력값을 확인해 보세요.</div>';let keys=Object.keys(rows[0]);return `<div class="result-count">조회 결과 <b>${rows.length}</b>행</div><table class="run-table"><thead><tr>${keys.map(k=>`<th>${esc(k)}<small>${esc(Object.values(TABLES).map(t=>t.fields[k]).find(Boolean)||'조회 열')}</small></th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${keys.map(k=>`<td>${esc(row[k])}</td>`).join('')}</tr>`).join('')}</tbody></table><div class="run-note">브라우저의 가상 데이터에서 조회한 결과입니다.</div>`}
+  function evaluate(){let code=$('#code-input').value.trim();current.draft=code;let sqlProject=state.projects.find(p=>p.id===current.projectId)||null;let sqlResult=window.openSqlRunner.run(code,{data:DATA,project:sqlProject,bindings:current.bindings});let up=norm(code), checks=current.check(code),supported=sqlResult.ok;let good=[],missing=[];let labels=current.projectId?(current.criteria||['SELECT 사용',current.table+' 데이터 소스',...current.cols.map(x=>x+' 열 포함'),'결과 변수 @'+(current.resultVar||'GT_DATA')]):current.topic==='안전한 변경'?['가상 Z 테이블을 대상으로 함','변경 값이 호스트 변수로 표기됨','대상 행을 WHERE 키 조건으로 제한함','표준 테이블을 변경하지 않음']:current.topic==='JOIN과 서브쿼리'?['LEFT OUTER JOIN 사용','테이블 연결 조건을 ON에 명시','결과를 내부 테이블에 저장']:current.topic==='집계와 그룹'?['COUNT 집계 사용','SBOOK 데이터 소스 사용','집계 값을 ABAP 변수로 받음']:current.topic==='성능과 코드 리뷰'?['기준 내부 테이블 빈 값 방어','FOR ALL ENTRIES 입력 지정','키 비교 조건 포함','IF 블록 종료']:current.title.includes('결과 행 수')?['SFLIGHT 조회','내부 테이블 저장','sy-dbcnt 참조']:current.title.includes('열끼리')?['SFLIGHT 조회','점유 좌석과 최대 좌석 열을 비교','결과 저장']:current.title.includes('정렬')?['SFLIGHT 조회','가격 기준 정렬','최대 한 행으로 제한','내부 테이블 저장']:current.title.includes('选择')?[]:current.title.includes('선택 범위')?['SFLIGHT 조회','CARRID 선택 범위 IN 조건','결과 저장']:current.title.includes('호스트 변수')?['SFLIGHT 조회','CARRID 호스트 변수 비교','필요 열과 결과 저장']:['SELECT 사용','SFLIGHT 데이터 소스','요구된 열 선택','내부 테이블에 저장'];checks.forEach((ok,i)=>(ok?good:missing).push(labels[i]||`요구사항 ${i+1}`));let score=Math.round(checks.filter(Boolean).length/checks.length*100),verdict=score===100?'정답':score>0?'부분 정답':'오답';if(!supported){verdict='오답';good=[];missing=['순수 Open SQL SELECT 한 문장으로 실행할 수 없습니다. '+sqlResult.error];score=0}let unsafe=/\b(UPDATE|DELETE|MODIFY|INSERT)\s+(SCARR|SPFLI|SFLIGHT|SBOOK)\b/i.test(code);if(unsafe){verdict='오답';score=0;good=[];missing=['표준 SAP 테이블 변경은 인정하지 않습니다. 가상 ZLAB_BOOKING만 변경 대상으로 사용하세요.']}let review=unsafe?'표준 테이블 변경 SQL은 허용하지 않습니다. 브라우저 가상 ZLAB_BOOKING만 대상으로 연습하세요.':missing.length?'DB 열에는 @를 붙이지 않고, ABAP 호스트 변수에는 @를 붙였는지 확인하세요. 조회 범위를 분명히 하고 필요한 열만 선택하는 습관을 유지하세요.':'요구사항의 데이터 소스와 결과 대상이 분명합니다. 실제 코드에서는 선택 범위가 비었을 때 조회 건수와 성능도 함께 확인하세요.';if(current.note&&!unsafe)review=current.note+' '+review;let rows=!unsafe&&sqlResult.ok?sqlResult.rows:[];result={verdict,score,good,missing,review,rows,showAnswer:false,reflectionOpen:false};if(verdict!=='정답')saveWrong(code,result);let entry={id:current.id,title:current.title,topic:current.topic,verdict,date:new Date().toISOString(),seed:current.seed};state.history=[...(state.history||[]),entry];if(!(state.recent||[]).some(x=>x.seed===current.seed))state.recent=[{template:current.title,seed:current.seed,projectId:current.projectId||null,variant:current.variant||null},...(state.recent||[])].slice(0,12);let today=new Date().toDateString();if(state.lastStudy!==today){let y=new Date();y.setDate(y.getDate()-1);state.streak=state.lastStudy===y.toDateString()?(state.streak||0)+1:1;state.lastStudy=today}persist();render()}
   function saveWrong(code,r){let w={id:current.id,title:current.title,topic:current.topic,projectId:current.projectId||null,projectSnapshot:current.projectId?JSON.parse(JSON.stringify(state.projects.find(x=>x.id===current.projectId)||{})):null,variant:current.variant||null,seed:current.seed,code,answer:current.answer,review:r.review,verdict:r.verdict,date:new Date().toISOString(),hintLevel:current.hintLevel,reflection:''};state.wrong=[w,...(state.wrong||[]).filter(x=>x.id!==current.id)].slice(0,200)}
   function wrongbook(){let items=(state.wrong||[]).filter(x=>(filter==='all'||filter===x.verdict)&&(topicFilter==='all'||topicFilter===x.topic));return `${header('REVIEW · '+(state.wrong||[]).length,'오답노트','틀린 문제를 다시 풀고, 헷갈린 개념을 기록해 보세요.',`<button class="ghost-btn" id="export-json">↓ JSON 내보내기</button>`)}<section class="card"><div class="card-head"><h2>저장된 문제</h2><div class="wrong-controls"><select id="filter-verdict"><option value="all">모든 판정</option><option>오답</option><option>부분 정답</option></select><select id="filter-topic"><option value="all">모든 주제</option>${TOPICS.map(t=>`<option>${t}</option>`).join('')}</select><button class="ghost-btn" id="import-json">JSON 가져오기</button><input type="file" id="import-file" accept="application/json" hidden></div></div>${items.length?items.map(w=>`<article class="wrong-item"><div class="wrong-item-head"><span class="tag ${w.verdict==='부분 정답'?'':'blue'}">${esc(w.verdict)}</span><h3>${esc(w.title)}</h3><span class="recent-grade">${esc(w.topic)}</span></div><p>${new Date(w.date).toLocaleString('ko-KR')} · seed ${w.seed} · 힌트 ${w.hintLevel}단계</p><div class="wrong-code">${esc(w.code||'(제출 코드 없음)')}</div>${w.reflection?`<p>복기: ${esc(w.reflection)}</p>`:''}<div class="wrong-actions"><button class="secondary-btn" data-retry="${w.seed}">같은 문제 다시 풀기</button><button class="secondary-btn" data-reflect="${w.id}">복기 수정</button><button class="ghost-btn" data-remove="${w.id}">삭제</button></div></article>`).join(''):`<div class="empty-state"><b>아직 저장된 오답이 없습니다</b>문제를 제출하면 오답과 부분 정답이 여기에 자동 저장됩니다.</div>`}</section>`}
-  function schema(){return `${header('REFERENCE · 04','스키마와 도움말','가상 예제 데이터와 Open SQL 핵심 용어를 확인하세요.') }<div class="section-grid">${Object.entries(TABLES).map(([t,x])=>`<section class="card schema-card"><h3>${t}</h3><p>${x.desc} · 앱의 가상 예제에는 ${DATA[t].length}개 행이 있습니다.</p><table class="field-table">${Object.entries(x.fields).map(([f,d])=>`<tr><td>${f}</td><td>${d}</td></tr>`).join('')}</table></section>`).join('')}<section class="card schema-card" style="grid-column:1/-1"><h2 style="font-size:13px;margin:0 0 13px">Open SQL 용어</h2><div class="glossary">${[['DB 열','데이터베이스 테이블의 필드. 예: SFLIGHT-CARRID.'],['@ 호스트 변수','ABAP 프로그램 변수임을 SQL에 알리는 표기. DB 열에는 붙이지 않습니다.'],['내부 테이블','SELECT 결과를 ABAP 메모리에 여러 행 저장하는 데이터 객체.'],['SELECT-OPTIONS','여러 값·범위·포함 조건을 담는 선택 테이블. 비어 있으면 필터가 적용되지 않을 수 있습니다.'],['FOR ALL ENTRIES','기준 내부 테이블의 각 행과 일치하는 DB 결과를 읽습니다. 기준 테이블이 비었는지 먼저 검사하세요.'],['LEFT OUTER JOIN','왼쪽 데이터는 유지하며 오른쪽 일치 행을 결합합니다. 오른쪽 열의 WHERE 필터는 결과 의미를 바꿀 수 있습니다.'],['SELECT SINGLE','정확히 한 행을 식별하는 키 조건에 사용합니다. 정렬된 첫 행에는 ORDER BY와 UP TO 1 ROWS를 사용하세요.'],['APPEND와 APPENDING TABLE','APPEND ls_flight TO et_flights. 는 ABAP 문장으로 한 행을 추가합니다. SELECT ... APPENDING TABLE @et_flights. 는 조회 결과를 기존 내부 테이블 뒤에 추가하는 Open SQL 대상 절입니다. INTO TABLE은 기존 내용을 대체합니다.'],['COMMIT / ROLLBACK','변경 확정/취소. 이 학습 앱의 가상 실습은 DB 트랜잭션을 실행하지 않습니다.']].map(([a,b])=>`<div><b>${a}</b><p>${b}</p></div>`).join('')}</div><div class="safe-banner">문법 기준은 Standard ABAP 7.62의 New Open SQL을 목표로 합니다. 이 앱의 토큰/구조 검사는 실제 ABAP 컴파일러가 아니며, 최종 문법 검증은 SAP GUI에서 하세요.</div></section></div>`}
+  function schema(){return `${header('REFERENCE · 04','스키마와 도움말','가상 예제 데이터와 Open SQL 핵심 용어를 확인하세요.') }<div class="section-grid">${Object.entries(TABLES).map(([t,x])=>`<section class="card schema-card"><h3>${t}</h3><p>${x.desc} · 앱의 가상 예제에는 ${DATA[t].length}개 행이 있습니다.</p><table class="field-table">${Object.entries(x.fields).map(([f,d])=>`<tr><td>${f}</td><td>${d}</td></tr>`).join('')}</table></section>`).join('')}<section class="card schema-card" style="grid-column:1/-1"><h2 style="font-size:13px;margin:0 0 13px">Open SQL 용어</h2><div class="glossary">${[['DB 열','데이터베이스 테이블의 필드. 예: SFLIGHT-CARRID.'],['@ 호스트 변수','ABAP 프로그램 변수임을 SQL에 알리는 표기. DB 열에는 붙이지 않습니다.'],['내부 테이블','SELECT 결과를 ABAP 메모리에 여러 행 저장하는 데이터 객체.'],['SELECT-OPTIONS','여러 값·범위·포함 조건을 담는 선택 테이블. 비어 있으면 필터가 적용되지 않을 수 있습니다.'],['FOR ALL ENTRIES','기준 내부 테이블의 각 행과 일치하는 DB 결과를 읽습니다. 기준 테이블이 비었는지 먼저 검사하세요.'],['LEFT OUTER JOIN','왼쪽 데이터는 유지하며 오른쪽 일치 행을 결합합니다. 오른쪽 열의 WHERE 필터는 결과 의미를 바꿀 수 있습니다.'],['SELECT SINGLE','정확히 한 행을 식별하는 키 조건에 사용합니다. 정렬된 첫 행에는 ORDER BY와 UP TO 1 ROWS를 사용하세요.'],['APPEND와 APPENDING TABLE','APPEND ls_flight TO et_flights. 는 ABAP 문장으로 한 행을 추가합니다. SELECT ... APPENDING TABLE @et_flights. 는 조회 결과를 기존 내부 테이블 뒤에 추가하는 Open SQL 대상 절입니다. INTO TABLE은 기존 내용을 대체합니다.'],['EXISTS / NOT EXISTS','서브쿼리가 한 행이라도 돌려주는지 검사합니다. 바깥 테이블 별칭과 키를 연결하는 상관 조건이 필요하며, 짝이 없는 행 찾기에 안전합니다.'],['CASE 식','SELECT 목록에서 조건에 따라 값을 고릅니다. CASE WHEN 조건 THEN 값 ELSE 값 END AS 별칭 형태입니다(7.40 이상).'],['COUNT( * ) vs COUNT( 열 )','LEFT OUTER JOIN 뒤 COUNT( * )는 짝 없는 행도 1로 셉니다. 오른쪽 열을 COUNT( 열 )로 세면 NULL이 제외됩니다.'],['COMMIT / ROLLBACK','변경 확정/취소. 이 학습 앱의 가상 실습은 DB 트랜잭션을 실행하지 않습니다.']].map(([a,b])=>`<div><b>${a}</b><p>${b}</p></div>`).join('')}</div><div class="safe-banner">문법 기준은 Standard ABAP 7.62의 New Open SQL을 목표로 합니다. 이 앱의 토큰/구조 검사는 실제 ABAP 컴파일러가 아니며, 최종 문법 검증은 SAP GUI에서 하세요.</div></section></div>`}
   function settings(){return `${header('PREFERENCES · 05','학습 설정','문제 난이도와 자주 연습할 주제를 선택하세요.')}<section class="card"><div class="settings-row"><div><h3>기본 난이도</h3><p>새 문제 생성 시 선택할 난이도입니다.</p></div><select id="level-setting"><option>전체</option><option>기초</option><option>중급</option><option>고급</option></select></div><div class="settings-row"><div><h3>연습 주제</h3><p>선택한 주제를 우선하여 문제를 무작위로 출제합니다.</p></div><div class="check-grid">${TOPICS.map(t=>`<label class="check-pill"><input type="checkbox" data-topic="${t}" ${(state.topics||TOPICS).includes(t)?'checked':''}>${t}</label>`).join('')}</div></div><div class="settings-row"><div><h3>오답노트 데이터</h3><p>학습 기록은 이 브라우저의 Local Storage에 저장됩니다.</p></div><button class="ghost-btn" id="export-settings">JSON 백업</button></div><div class="settings-row"><div><h3>학습 데이터 초기화</h3><p>오답, 풀이 기록, 설정을 이 브라우저에서 지웁니다.</p></div><button class="ghost-btn" id="clear-data">데이터 초기화</button></div><div class="safe-banner">저장 위치: 현재 브라우저 Local Storage · 서버 전송 없음 · 데이터 초기화 전 JSON 내보내기를 권장합니다.</div></section>`}
   function insertText(text){let el=$('#code-input');if(!el)return;let a=el.selectionStart,b=el.selectionEnd,val=el.value;el.value=val.slice(0,a)+text+val.slice(b);el.focus();el.selectionStart=el.selectionEnd=a+text.length;el.dispatchEvent(new Event('input',{bubbles:true}))}
-  function setupAutocomplete(el){
-    const box=$('#completion-list');let items=[],active=0,tokenRange=null;
-    const hide=()=>{box.hidden=true;items=[]};
-    const insert=item=>{if(!tokenRange)return;let value=el.value,text=item.insert,marker=text.indexOf('⟦CURSOR⟧'),posInText=marker<0?text.length:marker;text=text.replace('⟦CURSOR⟧','');el.value=value.slice(0,tokenRange.start)+text+value.slice(tokenRange.end);let pos=tokenRange.start+posInText;el.focus();el.selectionStart=el.selectionEnd=pos;hide();el.dispatchEvent(new Event('input',{bubbles:true}))};
-    const draw=(force=false)=>{
-      let p=el.selectionStart,left=el.value.slice(0,p),m=left.match(/[A-Za-z_~]+$/),loopAt=left.match(/\bLOOP\s+AT\s*$/i);
-      if(loopAt){tokenRange={start:p-loopAt[0].length,end:p};items=[{label:'LOOP AT ... ENDLOOP.',insert:'LOOP AT gt_data INTO gs_data.\n  ⟦CURSOR⟧\nENDLOOP.',detail:'내부 테이블 반복 블록'}];}
-      else{
-        if((!m&&!force)||(m&&/\b\d+$/.test(m[0]))){hide();return}
-        let q=m?m[0].toUpperCase():'',fieldNames=current.table.includes('+')?['C~CARRID','C~CARRNAME','F~CONNID','F~FLDATE','F~PRICE']:TABLES[current.table]?.fields?Object.keys(TABLES[current.table].fields):(current.cols||[]).filter(x=>/^(?:[A-Z][A-Z0-9_]*~)?[A-Z][A-Z0-9_]*$/.test(x)&&!/^(?:P|S|LV|LT|LS|GT|GS|GV|IV|EV|CV|CS|IS|ES|ET|IT|WA|LO|MO)_/i.test(x));
-        let upper=left.toUpperCase(),selectAt=upper.lastIndexOf('SELECT'),fromAt=upper.lastIndexOf('FROM'),intoAt=upper.lastIndexOf('INTO'),inSelect=selectAt>=0&&selectAt>fromAt&&selectAt>intoAt,inHost=/@[A-Z0-9_]*$/i.test(left);
-        let vars=[...new Set(['GT_DATA','GS_DATA','LV_CARRID','LV_COUNT','LV_NOTE','LV_ID','LT_KEYS','SY-SUBRC','SY-DBCNT',...Array.from((current.sourceContext||'').matchAll(/@([A-Z][A-Z0-9_]*)/gi),x=>x[1])])];
-        let words=['SELECT','FROM','WHERE','INTO','TABLE','APPENDING TABLE','CORRESPONDING FIELDS OF','FIELDS','ORDER BY','ORDER','BY','UP TO','ROWS','SINGLE','DISTINCT','AS','INNER JOIN','LEFT OUTER JOIN','JOIN','ON','AND','OR','BETWEEN','IN','LIKE','IS NULL','COUNT','MIN','MAX','SUM','AVG','GROUP BY','HAVING','EXISTS','FOR ALL ENTRIES IN','IF','NOT','INITIAL','ENDIF','LOOP','LOOP AT','ENDLOOP','APPEND','READ TABLE','WITH KEY','ASSIGNING','CLEAR','SORT','CHECK','CONTINUE','EXIT','CASE','WHEN','ENDCASE','WRITE','RETURN','DATA','TYPES','TYPE','TYPE TABLE OF','LIKE LINE OF','BEGIN OF','END OF','INT8','METHOD','ENDMETHOD','SCARR','SPFLI','SFLIGHT','SBOOK'];
-        let abapNames=['TY_CONNECTION','GT_CONNECTIONS','GS_CONNECTION','TY_SBOOK_TAB','GT_SBOOK','READ_BOOKINGS','LT_BOOKINGS','LS_BOOKING'];
-        let all=current.submissionType==='abap'?[...new Set([...words,...fieldNames,...vars,...abapNames])]:[...new Set(inSelect?[...fieldNames,'DISTINCT','SINGLE','COUNT','MIN','MAX','SUM','AVG','AS','CASE','WHEN','THEN','ELSE','END']:inHost?vars:[...words,...fieldNames,...vars])];
-        items=all.filter(x=>x.startsWith(q)&&x!==q).slice(0,10).map(x=>({label:x,insert:x,detail:fieldNames.includes(x)?(TABLES[current.table]?.fields?.[x]||'DB 필드'):['SELECT','FROM','WHERE','INTO','LOOP AT','ENDLOOP','APPEND','READ TABLE','DATA','TYPES'].includes(x)?'ABAP/Open SQL 구문':'키워드 또는 변수'}));
-        if(force&&/\bSELECT\s*$/i.test(left))items.unshift({label:'SELECT 조회문 틀',insert:'SELECT ⟦CURSOR⟧\n  FROM '+(current.table.split(' ')[0])+'\n  INTO TABLE @GT_DATA.',detail:'열과 결과 변수를 채우는 조회 뼈대'});
-        tokenRange={start:p-(m?m[0].length:0),end:p};
-      }
-      if(!items.length){hide();return}active=0;box.innerHTML=items.map((x,i)=>`<button class="completion-item ${i===active?'active':''}" type="button" data-completion-index="${i}"><code>${esc(x.label)}</code><small>${esc(x.detail)}</small></button>`).join('')+'<div class="completion-help">Tab/Enter 삽입 · Ctrl+Space 전체 제안</div>';box.hidden=false;box.querySelectorAll('[data-completion-index]').forEach(b=>b.onmousedown=e=>{e.preventDefault();insert(items[Number(b.dataset.completionIndex)])});
-    };
-    el.addEventListener('input',()=>draw());el.addEventListener('click',()=>draw());el.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.code==='Space'){e.preventDefault();draw(true);return}if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();evaluate();return}if(!box.hidden&&items.length){if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();active=(active+(e.key==='ArrowDown'?1:items.length-1))%items.length;box.querySelectorAll('.completion-item').forEach((x,i)=>x.classList.toggle('active',i===active));return}if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();insert(items[active]);return}if(e.key==='Escape'){hide();return}}if(e.key==='Tab'){e.preventDefault();insertText('  ')}});el.addEventListener('blur',()=>setTimeout(()=>{if(box)hide()},150));
-  }
-  function bind(){document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>changeView(b.dataset.go));const by=(s,fn)=>{let e=$(s);if(e)e.onclick=fn};by('#start-daily',newProblem);by('#top-new',newProblem);by('#practice-next',newProblem);by('#submit-answer',evaluate);by('#run-query',runQuery);by('#run-lab-query',runLabQuery);document.querySelectorAll('[data-lab-example]').forEach(b=>b.onclick=()=>{let examples={basic:'SELECT CARRID, CONNID, FLDATE\n  FROM SFLIGHT.',where:"SELECT CARRID, CONNID, PRICE\n  FROM SFLIGHT\n  WHERE CARRID = 'AA'.",group:'SELECT CARRID, COUNT(*) AS FLIGHT_COUNT\n  FROM SFLIGHT\n  GROUP BY CARRID\n  ORDER BY CARRID.',order:'SELECT CARRID, CONNID, PRICE\n  FROM SFLIGHT\n  ORDER BY PRICE DESCENDING\n  UP TO 3 ROWS.'};labDraft=examples[b.dataset.labExample];labOutput=null;render()});by('#reset-code',()=>{$('#code-input').value='';current.draft=''});by('#save-review',()=>{let w=state.wrong||[];if(!w.some(x=>x.id===current.id))saveWrong($('#code-input').value,{review:'복습을 위해 별표 표시했습니다.',verdict:'복습 예정'});persist();toast('오답노트에 저장했습니다.')});document.querySelectorAll('[data-hint]').forEach(b=>b.onclick=()=>{current.hintLevel=Math.max(current.hintLevel,Number(b.dataset.hint)+1);render()});by('#show-answer',()=>{result.showAnswer=true;render()});by('#review-again',()=>{result.reviewOpen=!result.reviewOpen;render()});by('#save-reflection',()=>{result.reflection=$('#reflection').value;let w=(state.wrong||[]).find(x=>x.id===current.id);if(w)w.reflection=result.reflection;persist();toast('복기 기록을 저장했습니다.')});let code=$('#code-input');if(code){code.addEventListener("input",()=>{if(current)current.draft=code.value});setupAutocomplete(code)}document.querySelectorAll('[data-snippet]').forEach(b=>b.onclick=()=>{let sn={select:`SELECT ${current.cols.join(', ')}\n  FROM ${current.table.split(' ')[0]}\n  `,where:'WHERE CARRID = @LV_CARRID\n  ',into:'INTO TABLE @GT_DATA.',if:'IF LT_KEYS IS NOT INITIAL.\n  \nENDIF.'};insertText(sn[b.dataset.snippet]||'')});document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>changeView(b.dataset.view));document.querySelectorAll('[data-retry]').forEach(b=>b.onclick=()=>{let w=(state.wrong||[]).find(x=>x.seed===b.dataset.retry);current=makeProblem(b.dataset.retry,w&&w.title);current.seed=b.dataset.retry;if(w){current.draft='';current.hintLevel=w.hintLevel||0}result=null;changeView('practice')});document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{state.wrong=state.wrong.filter(x=>x.id!==b.dataset.remove);persist();render()});document.querySelectorAll('[data-reflect]').forEach(b=>b.onclick=()=>{let w=state.wrong.find(x=>x.id===b.dataset.reflect);let v=prompt('이번에 배운 점 / 헷갈린 점을 적어 주세요.',w.reflection||'');if(v!==null){w.reflection=v;persist();render()}});let fv=$('#filter-verdict');if(fv){fv.value=filter;fv.onchange=()=>{filter=fv.value;render();$('#filter-verdict').value=filter}}let ft=$('#filter-topic');if(ft){ft.value=topicFilter;ft.onchange=()=>{topicFilter=ft.value;render();$('#filter-topic').value=topicFilter}}by('#export-json',exportJson);by('#export-settings',exportJson);by('#import-json',()=>$('#import-file').click());let file=$('#import-file');if(file)file.onchange=importJson;let level=$('#level-setting');if(level){level.value=state.level||'전체';level.onchange=()=>{state.level=level.value;persist()}}document.querySelectorAll('[data-topic]').forEach(x=>x.onchange=()=>{state.topics=[...document.querySelectorAll('[data-topic]:checked')].map(y=>y.dataset.topic);if(!state.topics.length){x.checked=true;state.topics=[x.dataset.topic]}persist()});by('#clear-data',()=>{if(confirm('이 브라우저에 저장된 모든 학습 기록을 지울까요?')){localStorage.removeItem(KEY);state={...defaults};current=null;render();toast('학습 데이터를 초기화했습니다.')}})}
+  function setupAutocomplete(el){let box=$('#completion-list'),items=[],active=0,tokenRange=null;const hide=()=>{box.hidden=true;items=[]};const insert=(item)=>{if(!tokenRange)return;let val=el.value,text=item.value,at=tokenRange.start+text.length;el.value=val.slice(0,tokenRange.start)+text+val.slice(tokenRange.end);if(item.cursorOffset!=null)at=tokenRange.start+item.cursorOffset;el.focus();el.selectionStart=el.selectionEnd=at;hide();el.dispatchEvent(new Event('input',{bubbles:true}))};const draw=()=>{let p=el.selectionStart,left=el.value.slice(0,p),m=left.match(/[A-Za-z_~]+$/);if(!m||m[0].length<2||/\b\d+$/.test(m[0])){hide();return}let q=m[0].toUpperCase(),fieldNames=current.projectId?current.cols:current.table.includes('+')?['C~CARRID','C~CARRNAME','F~CONNID','F~FLDATE','F~PRICE']:TABLES[current.table]?.fields?Object.keys(TABLES[current.table].fields):['ID','CARRID','NOTE'];let all=[...new Set(['SELECT','FROM','WHERE','INTO','TABLE','APPENDING','CORRESPONDING','FIELDS','ORDER','BY','UP','TO','ROWS','SINGLE','DISTINCT','AS','INNER','LEFT','OUTER','JOIN','ON','AND','OR','BETWEEN','IN','LIKE','IS','NULL','COUNT','MIN','MAX','SUM','AVG','GROUP','HAVING','EXISTS','FOR','ALL','ENTRIES','IF','NOT','INITIAL','ENDIF','CASE','WHEN','THEN','ELSE','END','COALESCE','DESCENDING','ASCENDING','PRIMARY','KEY','LOOP AT … ENDLOOP','ENDLOOP','ENDSELECT','ASSIGNING','DATA','LS_RESULT','LT_RESULT','COMMIT','ROLLBACK','WORK','SCARR','SPFLI','SFLIGHT','SBOOK','ZLAB_BOOKING','GT_DATA','GS_DATA','LV_CARRID','LV_COUNT','LV_NOTE','LV_ID','LT_KEYS','SY-SUBRC','SY-DBCNT','CARRID','CONNID','FLDATE','PRICE','CURRENCY','PLANETYPE','SEATSMAX','SEATSOCC','CITYFROM','CITYTO','DISTANCE','DISTID','FLTIME','CARRNAME','CURRCODE','BOOKID','CUSTOMID','FORCURAM','FORCURKEY','CANCELLED',...Object.values(TABLES).flatMap(t=>Object.keys(t.fields)),...fieldNames])];items=all.filter(x=>x.startsWith(q)&&x!==q).slice(0,8).map(label=>{if(label==='LOOP AT … ENDLOOP'){let text=`LOOP AT ${current.resultVar||'GT_DATA'} INTO DATA(LS_ROW).\n  \nENDLOOP.`;return {label,value:text,cursorOffset:text.indexOf('  \n')+2,help:'반복문 전체 틀 삽입'}}return {label,value:label,help:TABLES[current.table]?.fields?.[label]||(['SELECT','FROM','WHERE','INTO','ORDER BY','JOIN','ON','AND','OR'].includes(label)?'Open SQL 구문':'ABAP 키워드·허용 필드')}});if(!items.length){hide();return}tokenRange={start:p-m[0].length,end:p};active=0;box.innerHTML=items.map((x,i)=>`<button class="completion-item ${i===active?'active':''}" type="button" data-completion-index="${i}"><code>${esc(x.label)}</code><small>${esc(x.help)}</small></button>`).join('')+'<div class="completion-help">↑↓ 이동 · Tab 또는 Enter 삽입</div>';let style=getComputedStyle(el),lineHeight=parseFloat(style.lineHeight)||20,paddingTop=parseFloat(style.paddingTop)||0,line=left.split('\n').length-1;box.style.top=`${Math.max(4,Math.min(paddingTop+line*lineHeight-el.scrollTop+lineHeight,el.clientHeight-36))}px`;box.hidden=false;box.querySelectorAll('[data-completion-index]').forEach(b=>b.onmousedown=e=>{e.preventDefault();insert(items[Number(b.dataset.completionIndex)])})};el.addEventListener('input',draw);el.addEventListener('click',draw);el.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();evaluate();return}if(!box.hidden&&items.length){if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();active=(active+(e.key==='ArrowDown'?1:items.length-1))%items.length;box.querySelectorAll('.completion-item').forEach((x,i)=>x.classList.toggle('active',i===active));return}if(e.key==='Tab'||e.key==='Enter'){e.preventDefault();insert(items[active]);return}if(e.key==='Escape'){hide();return}}if(e.key==='Tab'){e.preventDefault();insertText('  ')}});el.addEventListener('scroll',draw);el.addEventListener('blur',()=>setTimeout(()=>{if(box)hide()},150))}
+  function bind(){document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>changeView(b.dataset.go));const by=(s,fn)=>{let e=$(s);if(e)e.onclick=fn};by('#start-daily',newProblem);by('#top-new',newProblem);by('#practice-next',newProblem);by('#submit-answer',evaluate);by('#run-query',runQuery);by('#run-lab-query',runLabQuery);document.querySelectorAll('[data-lab-example]').forEach(b=>b.onclick=()=>{let examples={basic:'SELECT CARRID, CONNID, FLDATE\n  FROM SFLIGHT.',where:"SELECT CARRID, CONNID, PRICE\n  FROM SFLIGHT\n  WHERE CARRID = 'AA'.",group:'SELECT CARRID, COUNT(*) AS FLIGHT_COUNT\n  FROM SFLIGHT\n  GROUP BY CARRID\n  ORDER BY CARRID.',order:'SELECT CARRID, CONNID, PRICE\n  FROM SFLIGHT\n  ORDER BY PRICE DESCENDING\n  UP TO 3 ROWS.',join:'SELECT C~CARRNAME, F~CONNID, F~FLDATE, F~PRICE\n  FROM SCARR AS C\n  INNER JOIN SFLIGHT AS F ON F~CARRID = C~CARRID\n  ORDER BY C~CARRNAME, F~FLDATE.',notexists:'SELECT C~CARRID, C~CARRNAME\n  FROM SCARR AS C\n  WHERE NOT EXISTS ( SELECT F~CARRID\n    FROM SFLIGHT AS F\n    WHERE F~CARRID = C~CARRID ).',case:"SELECT CARRID, CONNID, FLDATE,\n       CASE WHEN SEATSOCC = SEATSMAX THEN 'FULL' ELSE 'OPEN' END AS STATUS\n  FROM SFLIGHT."};labDraft=examples[b.dataset.labExample];labOutput=null;render()});by('#reset-code',()=>{$('#code-input').value='';current.draft=''});by('#save-review',()=>{let w=state.wrong||[];if(!w.some(x=>x.id===current.id))saveWrong($('#code-input').value,{review:'복습을 위해 별표 표시했습니다.',verdict:'복습 예정'});persist();toast('오답노트에 저장했습니다.')});document.querySelectorAll('[data-hint]').forEach(b=>b.onclick=()=>{if($('#code-input'))current.draft=$('#code-input').value;current.hintLevel=Math.max(current.hintLevel,Number(b.dataset.hint)+1);render();let editor=$('#code-input');if(editor){editor.focus();editor.setSelectionRange(editor.value.length,editor.value.length)}});by('#show-answer',()=>{result.showAnswer=true;render()});by('#review-again',()=>{result.reviewOpen=!result.reviewOpen;render()});by('#save-reflection',()=>{result.reflection=$('#reflection').value;let w=(state.wrong||[]).find(x=>x.id===current.id);if(w)w.reflection=result.reflection;persist();toast('복기 기록을 저장했습니다.')});let code=$('#code-input');if(code){code.addEventListener('input',()=>{current.draft=code.value});setupAutocomplete(code)}document.querySelectorAll('[data-snippet]').forEach(b=>b.onclick=()=>{let sn={select:`SELECT ${current.cols.join(', ')}\n  FROM ${current.table.split(' ')[0]}\n  `,where:'WHERE CARRID = @LV_CARRID\n  ',into:'INTO TABLE @GT_DATA.'};insertText(sn[b.dataset.snippet]||'')});document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>changeView(b.dataset.view));document.querySelectorAll('[data-retry]').forEach(b=>b.onclick=()=>{let w=(state.wrong||[]).find(x=>x.seed===b.dataset.retry);current=makeProblem(b.dataset.retry,w&&w.title);current.seed=b.dataset.retry;if(w){current.draft='';current.hintLevel=w.hintLevel||0}result=null;changeView('practice')});document.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{state.wrong=state.wrong.filter(x=>x.id!==b.dataset.remove);persist();render()});document.querySelectorAll('[data-reflect]').forEach(b=>b.onclick=()=>{let w=state.wrong.find(x=>x.id===b.dataset.reflect);let v=prompt('이번에 배운 점 / 헷갈린 점을 적어 주세요.',w.reflection||'');if(v!==null){w.reflection=v;persist();render()}});let fv=$('#filter-verdict');if(fv){fv.value=filter;fv.onchange=()=>{filter=fv.value;render();$('#filter-verdict').value=filter}}let ft=$('#filter-topic');if(ft){ft.value=topicFilter;ft.onchange=()=>{topicFilter=ft.value;render();$('#filter-topic').value=topicFilter}}by('#export-json',exportJson);by('#export-settings',exportJson);by('#import-json',()=>$('#import-file').click());let file=$('#import-file');if(file)file.onchange=importJson;let level=$('#level-setting');if(level){level.value=state.level||'전체';level.onchange=()=>{state.level=level.value;persist()}}document.querySelectorAll('[data-topic]').forEach(x=>x.onchange=()=>{state.topics=[...document.querySelectorAll('[data-topic]:checked')].map(y=>y.dataset.topic);if(!state.topics.length){x.checked=true;state.topics=[x.dataset.topic]}persist()});by('#clear-data',()=>{if(confirm('이 브라우저에 저장된 모든 학습 기록을 지울까요?')){localStorage.removeItem(KEY);state={...defaults};current=null;render();toast('학습 데이터를 초기화했습니다.')}})}
   function exportJson(){let blob=new Blob([JSON.stringify({app:'Open SQL Lab',version:1,exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='open-sql-lab-backup.json';a.click();URL.revokeObjectURL(a.href);toast('JSON 백업 파일을 만들었습니다.')}
   function importJson(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result),s=x.state||x;if(!Array.isArray(s.wrong)&&!Array.isArray(s.history))throw Error();state={...defaults,...s};persist();render();toast('학습 데이터를 가져왔습니다.')}catch{toast('올바른 Open SQL Lab 백업 JSON이 아닙니다.')}};r.readAsText(f);e.target.value=''}
   let toastTimer;function toast(s){let t=$('#toast');t.textContent=s;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2300)}
   document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>changeView(b.dataset.view));persist();render();
 })();
-
-
-
-
 
 

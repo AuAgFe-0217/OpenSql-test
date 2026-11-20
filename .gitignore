@@ -1,0 +1,8 @@
+# Local secrets and generated deployment output
+.env
+.env.*
+!.env.example
+_site/
+
+# Personal learning notes stay out of a public source repository
+Open_SQL_프로젝트_학습노트.md

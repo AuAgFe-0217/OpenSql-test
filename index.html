@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb"><title>Open SQL Lab | ABAP 학습</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#dashboard"><span class="brand-mark">{ }</span><span><b>Open SQL Lab</b><small>ABAP 연습실</small></span></a>
+      <div class="side-label">학습 메뉴</div>
+      <nav class="main-nav">
+        <button data-view="dashboard" class="nav-item active"><span>▦</span> 대시보드</button>
+        <button data-view="practice" class="nav-item"><span>⌘</span> 문제 풀기</button>
+        <button data-view="sql_lab" class="nav-item"><span>▶</span> SQL 실습</button>
+        <button data-view="projects" class="nav-item"><span>▧</span> 프로젝트 코드</button>
+        <button data-view="wrongbook" class="nav-item"><span>▤</span> 오답노트 <em id="wrong-count">0</em></button>
+        <button data-view="schema" class="nav-item"><span>◫</span> 스키마·도움말</button>
+        <button data-view="settings" class="nav-item"><span>⚙</span> 설정</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="safe-note"><span>◉</span><div><b>브라우저 안에서만</b><small>실제 SAP에 연결하지 않습니다.</small></div></div><small class="version">Standard ABAP 7.62 학습 기준</small></div>
+    </aside>
+    <main class="main-area">
+      <header class="topbar"><div><span class="breadcrumb">ABAP 학습 <span>/</span> <b id="page-title">대시보드</b></span><div class="top-sub">ZABAP_F05_ZMM001 · Open SQL 독학 트레이너</div></div><button class="top-action" id="top-new">＋ 새 문제</button></header>
+      <div id="app-content" class="content"></div>
+      <footer>가상 데이터 학습 도구 · 실제 SAP 시스템에서 컴파일 여부는 직접 확인하세요.</footer>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="project-problem.js"></script>
+  <script src="sql-runner.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

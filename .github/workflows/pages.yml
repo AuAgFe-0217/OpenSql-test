@@ -29,6 +29,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html styles.css app.js project-problem.js sql-runner.js _site/
+          sed -i "s#project-problem.js#project-problem.js?v=${GITHUB_SHA}#g; s#sql-runner.js#sql-runner.js?v=${GITHUB_SHA}#g; s#app.js#app.js?v=${GITHUB_SHA}#g" _site/index.html
           touch _site/.nojekyll
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

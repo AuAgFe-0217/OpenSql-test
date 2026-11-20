@@ -27,13 +27,56 @@
   ];
   const defaults={level:'전체',topics:[...TOPICS],daily:0,settings:{count:10}};
   let state=loadState(), view='dashboard', current=null, result=null, simulation=null, labOutput=null, labDraft='SELECT CARRID, COUNT(*) AS FLIGHT_COUNT\n  FROM SFLIGHT\n  GROUP BY CARRID\n  ORDER BY CARRID.', filter='all', topicFilter='all';
-  const starterCode=`SELECT CARRID, CONNID, FLDATE, PRICE, CURRENCY, PLANETYPE
+  const previousStarterCode=`SELECT CARRID, CONNID, FLDATE, PRICE, CURRENCY, PLANETYPE
   FROM SFLIGHT
   WHERE CARRID IN @S_CARRID
     AND CONNID IN @S_CONNID
   ORDER BY CARRID, CONNID, FLDATE
   INTO CORRESPONDING FIELDS OF TABLE @GT_DATA.`;
-  if(!Array.isArray(state.projects)||!state.projects.length){state.projects=[{id:'project-zmm001',name:'ZABAP_F05_ZMM001',description:'현재 진행 중인 SFLIGHT 조회 프로그램',tables:['SFLIGHT'],primaryTable:'SFLIGHT',fields:['CARRID','CONNID','FLDATE','PRICE','CURRENCY','PLANETYPE'],resultVar:'GT_DATA',conditionVars:['S_CARRID','S_CONNID'],source:starterCode}];state.selectedProjects=['project-zmm001'];state.activeProject='project-zmm001';persist()}
+  const starterCode=`REPORT ZABAP_F05_ZMM001.
+
+"기본 조회: 선택 범위로 항공편을 읽고 정렬합니다.
+SELECT CARRID, CONNID, FLDATE, PRICE, CURRENCY, PLANETYPE, SEATSMAX, SEATSOCC
+  FROM SFLIGHT
+  WHERE CARRID IN @S_CARRID AND CONNID IN @S_CONNID
+  ORDER BY CARRID, CONNID, FLDATE
+  INTO CORRESPONDING FIELDS OF TABLE @GT_DATA
+  UP TO 100 ROWS.
+
+"열 비교 조건
+SELECT F~CARRID, F~CONNID, F~FLDATE, F~PRICE, F~SEATSMAX, F~SEATSOCC
+  FROM SFLIGHT AS F
+  WHERE F~CARRID IN @S_CARRID AND F~CONNID IN @S_CONNID
+    AND F~SEATSOCC < F~SEATSMAX
+  ORDER BY F~CARRID, F~CONNID, F~FLDATE
+  INTO CORRESPONDING FIELDS OF TABLE @GT_DATA
+  UP TO 100 ROWS.
+
+"키 조건으로 항공사 한 건 조회
+SELECT SINGLE CARRID, CARRNAME, CURRCODE
+  FROM SCARR
+  WHERE CARRID = @P_CARR
+  INTO @DATA(GS_CARRIER).
+
+"항공사별 건수와 점유 좌석 합계
+SELECT CARRID, COUNT( * ) AS FLIGHT_COUNT, SUM( SEATSOCC ) AS TOTAL_OCCUPIED
+  FROM SFLIGHT
+  WHERE CARRID IN @S_CARRID AND CONNID IN @S_CONNID
+  GROUP BY CARRID
+  ORDER BY CARRID
+  INTO TABLE @DATA(GT_TOTALS).
+
+"항공사 이름과 항공편을 INNER JOIN
+SELECT C~CARRID, C~CARRNAME, F~CONNID, F~FLDATE, F~PRICE, F~CURRENCY
+  FROM SCARR AS C
+  INNER JOIN SFLIGHT AS F ON C~CARRID = F~CARRID
+  WHERE F~CARRID IN @S_CARRID AND F~CONNID IN @S_CONNID
+  ORDER BY C~CARRID, F~CONNID, F~FLDATE
+  INTO TABLE @DATA(GT_JOINED)
+  UP TO 100 ROWS.`;
+  const defaultProject={id:'project-zmm001',name:'ZABAP_F05_ZMM001',description:'SFLIGHT 조회, SCARR 단건 조회, 집계와 JOIN 실습',tables:['SFLIGHT','SCARR'],primaryTable:'SFLIGHT',fields:['CARRID','CONNID','FLDATE','PRICE','CURRENCY','PLANETYPE','SEATSMAX','SEATSOCC'],resultVar:'GT_DATA',conditionVars:['S_CARRID','S_CONNID'],source:starterCode};
+  if(!Array.isArray(state.projects)||!state.projects.length){state.projects=[{...defaultProject}];state.selectedProjects=['project-zmm001'];state.activeProject='project-zmm001';persist()}
+  else {const untouchedDefault=state.projects.find(p=>p.id==='project-zmm001'&&p.source===previousStarterCode);if(untouchedDefault){Object.assign(untouchedDefault,defaultProject);persist()}}
   if(!Array.isArray(state.selectedProjects))state.selectedProjects=[state.projects[0].id];
   const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function loadState(){try{return {...defaults,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return {...defaults}}}

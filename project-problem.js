@@ -5,6 +5,39 @@
     return match && match[1] ? match[1].trim().replace(/\s+/g, ' ') : '';
   };
   const numericField = fields => fields.find(field => /PRICE|AMOUNT|VALUE|DISTANCE|TIME|SEATS|COUNT|QUANTITY|QTY|TOTAL|SALDO|BETRG|MENGE/i.test(field));
+  const sourceQueries = source => String(source || '').split(/\r?\n/).filter(line => !/^\s*"/.test(line)).join('\n').match(/\bSELECT\b[\s\S]*?\./gi) || [];
+  const sourceProblem = (project, seed, variant, index) => {
+    const statement = sourceQueries(project.source)[index];
+    if (!statement) return null;
+    const sql = statement.trim().replace(/\.$/, '');
+    const table = (sql.match(/\bFROM\s+([A-Z][A-Z0-9_]*)/i) || [])[1] || project.primaryTable || 'SFLIGHT';
+    const list = (sql.match(/^\s*SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?([\s\S]*?)\s+FROM\b/i) || [])[1] || '*';
+    const pieces = [`SELECT ${sql.match(/^\s*SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?/i)?.[0]?.trim().replace(/\s+$/,'') || 'SELECT'} ${list}`, `FROM ${table}`];
+    const pushClause = (label, expression) => { const match = sql.match(expression); if (match) pieces.push(`${label} ${match[1].trim().replace(/\s+/g, ' ')}`); };
+    const join = sql.match(/\b((?:INNER|LEFT\s+OUTER|LEFT|RIGHT\s+OUTER|RIGHT)\s+JOIN\s+[A-Z][A-Z0-9_]*(?:\s+AS\s+[A-Z][A-Z0-9_]*)?)/i);
+    if (join) pieces.push(join[1].replace(/\s+/g, ' '));
+    pushClause('ON', /\bON\s+([\s\S]*?)(?=\bWHERE\b|\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i);
+    pushClause('WHERE', /\bWHERE\s+([\s\S]*?)(?=\bGROUP\s+BY\b|\bHAVING\b|\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i);
+    pushClause('GROUP BY', /\bGROUP\s+BY\s+([\s\S]*?)(?=\bHAVING\b|\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i);
+    pushClause('HAVING', /\bHAVING\s+([\s\S]*?)(?=\bORDER\s+BY\b|\bINTO\b|\bUP\s+TO\b|$)/i);
+    pushClause('ORDER BY', /\bORDER\s+BY\s+([\s\S]*?)(?=\bINTO\b|\bUP\s+TO\b|$)/i);
+    const into = sql.match(/\bINTO\s+([\s\S]*?)(?=\bUP\s+TO\b|$)/i);
+    if (into) pieces.push(`INTO ${into[1].trim().replace(/\s+/g, ' ')}`);
+    const limit = sql.match(/\bUP\s+TO\s+\d+\s+ROWS/i);
+    if (limit) pieces.push(limit[0]);
+    const type = /\bSINGLE\b/i.test(sql) ? ['SELECT SINGLE 연습', '기초'] : /\bJOIN\b/i.test(sql) ? ['프로젝트 JOIN 연습', '중급'] : /\bGROUP\s+BY\b/i.test(sql) ? ['프로젝트 그룹 집계 연습', '중급'] : /\bSEATSOCC\s*</i.test(sql) ? ['열 비교 조건 연습', '중급'] : /\bORDER\s+BY\b/i.test(sql) ? ['정렬과 행 수 제한 연습', '기초'] : ['프로젝트 조회 패턴 연습', '기초'];
+    const answer = sql + '.';
+    return {
+      topic: 'SELECT 구문 연습', level: type[1], title: project.name + ' · ' + type[0] + ' ' + (index + 1), table,
+      cols: list.split(',').map(x => x.trim()).filter(Boolean),
+      hints: ['프로젝트 전체 코드에서 이 SELECT 패턴의 목적을 먼저 확인하세요.', 'SELECT, FROM, WHERE·JOIN·GROUP BY 등의 절을 코드의 순서대로 작성하세요.', answer],
+      answer, criteria: pieces, check: code => pieces.map(part => normalize(code).includes(normalize(part))),
+      req: `프로젝트 코드의 조회 패턴 ${index + 1}을 Open SQL SELECT 구문으로 다시 작성하세요. 이 문제는 ${type[0].replace(' 연습','')}을 포함합니다.`,
+      run: () => [{ 안내: '프로젝트 코드에서 추출한 SELECT 구문 연습입니다. 실제 SAP DB를 조회하지 않습니다.' }],
+      projectId: project.id, resultVar: project.resultVar || 'GT_DATA', sourceContext: project.source || '', variant,
+      id: 'SQL-' + String(seed).slice(0, 6).toUpperCase(), seed, created: new Date().toISOString(), params: {}, hintLevel: 0
+    };
+  };
   const variants = project => {
     const fields = project.fields && project.fields.length ? project.fields : ['CARRID', 'CONNID'];
     const ids = ['projection', 'focused', 'distinct', 'ordering', 'ordering_desc', 'limit_one', 'limit_three', 'group_count', 'group_having', 'count_all', 'count_distinct', 'subquery', 'where_not_initial'];
@@ -14,6 +47,7 @@
     if (where) ids.push('conditions');
     if ((project.conditionVars || []).length) ids.push('where_project_variable');
     ids.push('where_like');
+    sourceQueries(project.source).forEach((_, index) => ids.push(`source_query_${index}`));
     return ids;
   };
   const build = (project, seed, variant = 'projection') => {
@@ -27,6 +61,8 @@
     const keyField = fields[offset];
     const valueField = numericField(fields) || fields[fields.length - 1];
     const variable = (project.conditionVars || [])[0] || 'LV_VALUE';
+    const sourceMatch = String(variant).match(/^source_query_(\d+)$/);
+    if (sourceMatch) return sourceProblem(project, seed, variant, Number(sourceMatch[1]));
     let title = '', level = '기초', request = '', answer = '', required = [], selected = focused;
     const selectInto = `INTO TABLE @${resultVar}`;
     const simpleAnswer = (cols, clauses = [], ending = [selectInto]) => `SELECT ${cols.join(', ')}\n  FROM ${table}${clauses.length ? '\n  ' + clauses.join('\n  ') : ''}\n  ${ending.join('\n  ')}.`;

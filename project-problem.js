@@ -1,56 +1,139 @@
 (() => {
   const normalize = value => String(value || '').toUpperCase().replace(/"[^\n]*"|'[^']*'/g, ' ').replace(/\s+/g, ' ').replace(/\s*([,.()=<>])\s*/g, '$1').trim();
   const getWhere = source => {
-    const m = String(source || '').match(/\bWHERE\s+([\s\S]*?)(?=\b(?:ORDER\s+BY|INTO|UP\s+TO|ENDSELECT)\b|\.)/i);
-    const value = m && m[1] ? m[1].trim().replace(/\s+/g, ' ') : '';
-    return value.length <= 130 ? value : '';
+    const match = String(source || '').match(/\bWHERE\s+([\s\S]*?)(?=\b(?:GROUP\s+BY|HAVING|ORDER\s+BY|INTO|UP\s+TO|ENDSELECT)\b|\.)/i);
+    return match && match[1] ? match[1].trim().replace(/\s+/g, ' ') : '';
   };
-  const variants = project => getWhere(project.source) ? ['projection', 'focused', 'ordering', 'conditions'] : ['projection', 'focused', 'ordering'];
+  const numericField = fields => fields.find(field => /PRICE|AMOUNT|VALUE|DISTANCE|TIME|SEATS|COUNT|QUANTITY|QTY|TOTAL|SALDO|BETRG|MENGE/i.test(field));
+  const variants = project => {
+    const fields = project.fields && project.fields.length ? project.fields : ['CARRID', 'CONNID'];
+    const ids = ['projection', 'focused', 'distinct', 'ordering', 'ordering_desc', 'limit_one', 'limit_three', 'group_count', 'group_having', 'count_all', 'count_distinct', 'subquery', 'where_not_initial'];
+    const valueField = numericField(fields);
+    if (valueField) ids.push('aggregate_min', 'aggregate_max', 'aggregate_sum', 'aggregate_avg', 'group_sum', 'where_between');
+    const where = getWhere(project.source);
+    if (where) ids.push('conditions');
+    if ((project.conditionVars || []).length) ids.push('where_project_variable');
+    ids.push('where_like');
+    return ids;
+  };
   const build = (project, seed, variant = 'projection') => {
     const table = project.primaryTable || (project.tables || [])[0] || 'SFLIGHT';
     const fields = project.fields && project.fields.length ? project.fields : ['CARRID', 'CONNID'];
     const resultVar = project.resultVar || 'GT_DATA';
     const where = getWhere(project.source);
     const offset = parseInt(String(seed).slice(0, 2), 16) % fields.length;
-    const focusedFields = fields.length === 1 ? [fields[0]] : fields.length === 2 ? [fields[offset]] : [fields[offset], fields[(offset + 1) % fields.length]];
-    let cols = [...fields], orderField = '', useWhere = !!where;
-    if (variant === 'focused') { cols = focusedFields; useWhere = false; }
-    if (variant === 'ordering') { cols = focusedFields; useWhere = false; orderField = cols[0]; }
-    if (variant === 'conditions') { cols = focusedFields; useWhere = !!where; }
-    const whereClause = useWhere ? '\n  WHERE ' + where : '';
-    const orderClause = orderField ? '\n  ORDER BY ' + orderField + ' ASCENDING' : '';
-    const answer = 'SELECT ' + cols.join(', ') + '\n  FROM ' + table + whereClause + orderClause + '\n  INTO TABLE @' + resultVar + '.';
-    const checks = [
-      code => normalize(code).includes('SELECT'),
-      code => normalize(code).includes('FROM ' + table),
-      ...cols.map(col => code => normalize(code).includes(col.toUpperCase())),
-      code => normalize(code).includes('INTO TABLE @' + resultVar),
-      ...(useWhere ? [code => normalize(code).includes(normalize(where))] : []),
-      ...(orderField ? [code => normalize(code).includes('ORDER BY ' + orderField + ' ASCENDING')] : [])
-    ];
-    let title, request, hints;
-    if (variant === 'focused') {
-      title = project.name + ' · 필요한 열만 조회하기';
-      request = '프로젝트 “' + project.name + '”의 ' + table + '에서 ' + cols.join(', ') + ' 열만 조회해 @' + resultVar + '에 저장하세요. 전체 필드 대신 문제에서 요구한 열만 선택하세요.';
-      hints = ['문제에서 요구한 열만 SELECT 목록에 두세요.', '테이블은 ' + table + ', 결과 내부 테이블은 @' + resultVar + '입니다.', answer];
-    } else if (variant === 'ordering') {
-      title = project.name + ' · 정렬 조건 추가하기';
-      request = '프로젝트 “' + project.name + '”의 ' + table + '에서 ' + cols.join(', ') + ' 열을 조회하고, ' + orderField + ' 오름차순으로 정렬해 @' + resultVar + '에 저장하세요.';
-      hints = ['정렬 기준은 DB 열 이름이며 @를 붙이지 않습니다.', 'ORDER BY ' + orderField + ' ASCENDING을 추가하세요.', answer];
-    } else if (variant === 'conditions') {
-      title = project.name + ' · 기존 WHERE 조건 살리기';
-      request = '프로젝트 코드에서 사용한 조건을 유지하며 ' + table + '에서 ' + cols.join(', ') + ' 열을 조회하세요. WHERE 조건의 DB 열과 ABAP 호스트 변수를 구분하고 결과를 @' + resultVar + '에 저장하세요. 조건: ' + where;
-      hints = ['프로젝트 원본의 WHERE 조건을 먼저 확인하세요.', 'DB 열 이름에는 @를 붙이지 않고 ABAP 변수에는 붙입니다.', answer];
-    } else {
-      title = project.name + ' · 조회 패턴 다시 작성하기';
-      request = '프로젝트 “' + project.name + '”의 조회를 재구성하세요. ' + table + '에서 ' + cols.join(', ') + ' 열을 조회해 @' + resultVar + '에 저장하세요.' + (useWhere ? ' 기존 WHERE 조건도 유지하세요: ' + where : '');
-      hints = ['이 프로젝트의 전체 코드에서 SELECT, FROM, WHERE 절을 확인하세요.', '필요한 DB 열을 SELECT에, ' + table + '을 FROM에 적으세요.', answer];
+    const pick = (start, count = 1) => Array.from({ length: Math.min(count, fields.length) }, (_, i) => fields[(start + i) % fields.length]);
+    const focused = pick(offset, Math.min(2, fields.length));
+    const keyField = fields[offset];
+    const valueField = numericField(fields) || fields[fields.length - 1];
+    const variable = (project.conditionVars || [])[0] || 'LV_VALUE';
+    let title = '', level = '기초', request = '', answer = '', required = [], selected = focused;
+    const selectInto = `INTO TABLE @${resultVar}`;
+    const simpleAnswer = (cols, clauses = [], ending = [selectInto]) => `SELECT ${cols.join(', ')}\n  FROM ${table}${clauses.length ? '\n  ' + clauses.join('\n  ') : ''}\n  ${ending.join('\n  ')}.`;
+    const setup = (name, tier, req, sql, checks, cols = selected) => {
+      title = project.name + ' · ' + name;
+      level = tier;
+      request = req;
+      answer = sql;
+      required = checks;
+      selected = cols;
+    };
+
+    switch (variant) {
+      case 'focused':
+        setup('필요한 열만 조회하기', '기초', `${table}에서 ${focused.join(', ')} 열만 조회해 @${resultVar}에 저장하세요.`, simpleAnswer(focused), [`FROM ${table}`, ...focused, selectInto]);
+        break;
+      case 'distinct':
+        setup('중복 없이 값 조회하기', '기초', `${table}에서 ${keyField}의 중복을 제거해 조회하세요.`, simpleAnswer([`DISTINCT ${keyField}`]), [`DISTINCT ${keyField}`, `FROM ${table}`, selectInto], [keyField]);
+        break;
+      case 'ordering':
+      case 'ordering_desc': {
+        const direction = variant === 'ordering' ? 'ASCENDING' : 'DESCENDING';
+        const cols = pick(offset, Math.min(2, fields.length));
+        setup(`${direction === 'ASCENDING' ? '오름차순' : '내림차순'} 정렬`, '기초', `${table}에서 ${cols.join(', ')}를 조회하고 ${cols[0]} 기준 ${direction === 'ASCENDING' ? '오름차순' : '내림차순'}으로 정렬하세요.`, simpleAnswer(cols, [`ORDER BY ${cols[0]} ${direction}`]), [`FROM ${table}`, ...cols, `ORDER BY ${cols[0]} ${direction}`, selectInto], cols);
+        break;
+      }
+      case 'limit_one':
+      case 'limit_three': {
+        const count = variant === 'limit_one' ? 1 : 3;
+        const cols = pick(offset, Math.min(2, fields.length));
+        setup(`${count}건만 조회하기`, '기초', `${table}에서 ${cols.join(', ')}를 ${count}건까지만 조회하세요.`, simpleAnswer(cols, [], [selectInto, `UP TO ${count} ROWS`]), [`FROM ${table}`, ...cols, selectInto, `UP TO ${count} ROWS`], cols);
+        break;
+      }
+      case 'conditions':
+        setup('프로젝트 WHERE 조건 적용하기', '기초', `프로젝트 코드의 조건을 유지해 ${table}에서 ${focused.join(', ')}를 조회하세요: ${where}`, simpleAnswer(focused, [`WHERE ${where}`]), [`FROM ${table}`, ...focused, normalize(where), selectInto], focused);
+        break;
+      case 'where_project_variable': {
+        const inferredField = (project.conditionVars || []).map(v => fields.find(f => v.toUpperCase().endsWith(f))).find(Boolean) || keyField;
+        const isRange = /^S_/i.test(variable);
+        const predicate = isRange ? `${inferredField} IN @${variable}` : `${inferredField} = @${variable}`;
+        setup(isRange ? '선택 범위로 필터링하기' : '호스트 변수로 필터링하기', '기초', `${table}에서 ${inferredField} 조건을 적용하세요. 프로젝트 변수 @${variable}을 사용해 ${focused.join(', ')}를 조회하세요.`, simpleAnswer(focused, [`WHERE ${predicate}`]), [`FROM ${table}`, ...focused, predicate, selectInto], focused);
+        break;
+      }
+      case 'where_between':
+        setup('BETWEEN 범위 조건', '중급', `${table}에서 ${valueField} 값이 @LV_LOW와 @LV_HIGH 사이인 행만 조회하세요. 열은 ${focused.join(', ')}로 제한하세요.`, simpleAnswer(focused, [`WHERE ${valueField} BETWEEN @LV_LOW AND @LV_HIGH`]), [`FROM ${table}`, ...focused, `${valueField} BETWEEN @LV_LOW AND @LV_HIGH`, selectInto], focused);
+        break;
+      case 'where_like':
+        setup('LIKE 패턴 검색', '중급', `${table}에서 ${keyField}가 ABAP 호스트 변수 @LV_PATTERN 패턴과 일치하는 행을 조회하세요.`, simpleAnswer(focused, [`WHERE ${keyField} LIKE @LV_PATTERN`]), [`FROM ${table}`, ...focused, `${keyField} LIKE @LV_PATTERN`, selectInto], focused);
+        break;
+      case 'where_not_initial':
+        setup('초기값이 아닌 행 찾기', '중급', `${table}에서 ${keyField}가 초기값이 아닌 행만 조회하세요.`, simpleAnswer(focused, [`WHERE ${keyField} IS NOT INITIAL`]), [`FROM ${table}`, ...focused, `${keyField} IS NOT INITIAL`, selectInto], focused);
+        break;
+      case 'count_all':
+        setup('전체 행 개수 세기', '중급', `${table}의 전체 행 개수를 집계해 @LV_COUNT에 받으세요.`, `SELECT COUNT( * )\n  FROM ${table}\n  INTO @LV_COUNT.`, [`COUNT(*)`, `FROM ${table}`, 'INTO @LV_COUNT'], []);
+        break;
+      case 'count_distinct':
+        setup('고유 값 개수 세기', '고급', `${table}에서 서로 다른 ${keyField} 값의 개수를 COUNT DISTINCT로 구해 @LV_COUNT에 받으세요.`, `SELECT COUNT( DISTINCT ${keyField} )\n  FROM ${table}\n  INTO @LV_COUNT.`, [`COUNT(DISTINCT ${keyField})`, `FROM ${table}`, 'INTO @LV_COUNT'], [keyField]);
+        break;
+      case 'group_count': {
+        const cols = [keyField, 'COUNT( * ) AS ROW_COUNT'];
+        setup('GROUP BY별 건수 집계', '중급', `${table}에서 ${keyField}별 행 개수를 세어 ${keyField}와 ROW_COUNT를 @${resultVar}에 저장하세요.`, simpleAnswer(cols, [`GROUP BY ${keyField}`]), [`FROM ${table}`, keyField, 'COUNT(*)', `GROUP BY ${keyField}`, selectInto], cols);
+        break;
+      }
+      case 'group_having': {
+        const cols = [keyField, 'COUNT( * ) AS ROW_COUNT'];
+        setup('HAVING으로 그룹 걸러내기', '고급', `${table}에서 ${keyField}별로 그룹화하고, 그룹 건수가 @LV_MIN_COUNT 이상인 그룹만 남기세요.`, simpleAnswer(cols, [`GROUP BY ${keyField}`, 'HAVING COUNT( * ) >= @LV_MIN_COUNT']), [`FROM ${table}`, keyField, 'COUNT(*)', `GROUP BY ${keyField}`, 'HAVING COUNT(*) >= @LV_MIN_COUNT', selectInto], cols);
+        break;
+      }
+      case 'aggregate_min':
+      case 'aggregate_max':
+      case 'aggregate_sum':
+      case 'aggregate_avg': {
+        const fn = ({ aggregate_min: 'MIN', aggregate_max: 'MAX', aggregate_sum: 'SUM', aggregate_avg: 'AVG' })[variant];
+        const target = ({ MIN: 'LV_MIN', MAX: 'LV_MAX', SUM: 'LV_SUM', AVG: 'LV_AVG' })[fn];
+        setup(`${fn} 집계`, '중급', `${table}에서 ${valueField}의 ${fn} 값을 계산해 @${target}에 받으세요.`, `SELECT ${fn}( ${valueField} )\n  FROM ${table}\n  INTO @${target}.`, [`${fn}(${valueField})`, `FROM ${table}`, `INTO @${target}`], [valueField]);
+        break;
+      }
+      case 'group_sum': {
+        const cols = [keyField, `SUM( ${valueField} ) AS TOTAL_VALUE`];
+        setup('그룹별 합계 계산', '고급', `${table}에서 ${keyField}별 ${valueField} 합계를 구하고 두 결과 열을 @${resultVar}에 저장하세요.`, simpleAnswer(cols, [`GROUP BY ${keyField}`]), [`FROM ${table}`, keyField, `SUM(${valueField})`, `GROUP BY ${keyField}`, selectInto], cols);
+        break;
+      }
+      case 'subquery': {
+        const otherField = fields.length > 1 ? fields[(offset + 1) % fields.length] : keyField;
+        const sql = `SELECT A~${keyField}, A~${otherField}\n  FROM ${table} AS A\n  WHERE A~${keyField} IN ( SELECT B~${keyField}\n    FROM ${table} AS B\n    WHERE B~${otherField} = @LV_VALUE )\n  INTO TABLE @${resultVar}.`;
+        setup('IN 서브쿼리 작성', '고급', `${table}을 별칭 A와 B로 두 번 사용하세요. 내부 조회에서 @LV_VALUE와 일치하는 ${otherField}의 ${keyField}를 찾고, 그 키에 해당하는 바깥 행의 ${keyField}, ${otherField}를 조회하세요.`, sql, [`IN ( SELECT B~${keyField}`, `FROM ${table} AS A`, `FROM ${table} AS B`, `B~${otherField} = @LV_VALUE`, `INTO TABLE @${resultVar}`], [keyField, otherField]);
+        break;
+      }
+      default:
+        setup('프로젝트 열 조회하기', '기초', `${table}에서 ${focused.join(', ')}만 조회해 @${resultVar}에 저장하세요.`, simpleAnswer(focused), [`FROM ${table}`, ...focused, selectInto]);
     }
+
+    const checks = required.map(part => code => normalize(code).includes(normalize(part)));
     return {
-      topic: '프로젝트 코드 연습', level: '기초', title, table, cols, hints, answer, check: code => checks.map(fn => fn(code)), req: request,
-      run: () => [Object.fromEntries(cols.map((col, i) => [col, '가상 예시 ' + (i + 1)]))],
+      topic: 'SELECT 구문 연습', level, title, table, cols: selected,
+      hints: [
+        '문제에서 요구한 SELECT 열과 FROM 테이블부터 작성하세요.',
+        '필터는 WHERE, 그룹 조건은 HAVING, 정렬은 ORDER BY에 둡니다. ABAP 변수에는 @를 붙이세요.',
+        answer
+      ],
+      answer,
+      check: code => checks.map(fn => fn(code)), criteria: required,
+      req: request,
+      run: () => [Object.fromEntries((selected.length ? selected : ['결과']).map((col, i) => [col, `가상 결과 ${i + 1}`]))],
       projectId: project.id, resultVar, sourceContext: project.source || '', variant,
-      id: 'SQL-' + String(seed).slice(0, 6).toUpperCase(), seed, created: new Date().toISOString(), params: {}, hintLevel: 0
+      id: 'SQL-' + String(seed).slice(0, 6).toUpperCase(), seed,
+      created: new Date().toISOString(), params: {}, hintLevel: 0
     };
   };
   window.openSqlProjectProblem = { build, variants };

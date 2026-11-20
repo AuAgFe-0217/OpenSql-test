@@ -50,7 +50,8 @@
     AND CONNID IN @S_CONNID
   ORDER BY CARRID, CONNID, FLDATE
   INTO CORRESPONDING FIELDS OF TABLE @GT_DATA.`;
-  const starterCode=`REPORT ZABAP_F05_ZMM001.
+  // 마지막 배포 버전과 비교해, 사용자가 직접 편집하지 않은 기본 코드만 안전하게 갱신합니다.
+  const previousDefaultProjectCode=`REPORT ZABAP_F05_ZMM001.
 
 "기본 조회: 선택 범위로 항공편을 읽고 정렬합니다.
 SELECT CARRID, CONNID, FLDATE, PRICE, CURRENCY, PLANETYPE, SEATSMAX, SEATSOCC
@@ -91,9 +92,269 @@ SELECT C~CARRID, C~CARRNAME, F~CONNID, F~FLDATE, F~PRICE, F~CURRENCY
   ORDER BY C~CARRID, F~CONNID, F~FLDATE
   INTO TABLE @DATA(GT_JOINED)
   UP TO 100 ROWS.`;
-  const defaultProject={id:'project-zmm001',name:'ZABAP_F05_ZMM001',description:'SFLIGHT 조회, SCARR 단건 조회, 집계와 JOIN 실습',tables:['SFLIGHT','SCARR'],primaryTable:'SFLIGHT',fields:['CARRID','CONNID','FLDATE','PRICE','CURRENCY','PLANETYPE','SEATSMAX','SEATSOCC'],resultVar:'GT_DATA',conditionVars:['S_CARRID','S_CONNID'],source:starterCode};
-  if(!Array.isArray(state.projects)||!state.projects.length){state.projects=[{...defaultProject}];state.selectedProjects=['project-zmm001'];state.activeProject='project-zmm001';persist()}
-  else {const untouchedDefault=state.projects.find(p=>p.id==='project-zmm001'&&p.source===previousStarterCode);if(untouchedDefault){Object.assign(untouchedDefault,defaultProject);persist()}}
+
+  // SFLIGHT/SCARR 예제는 선언부, 선택 화면, 각 SELECT 실습을 한 보고서로 모읍니다.
+  const starterCode=`REPORT ZABAP_F05_ZMM001.
+
+"조회 결과 한 행의 구조입니다. SELECT 목록과 필드 이름을 맞춰 사용합니다.
+TYPES: BEGIN OF TY_DATA,
+         CARRID    TYPE SFLIGHT-CARRID,
+         CONNID    TYPE SFLIGHT-CONNID,
+         FLDATE    TYPE SFLIGHT-FLDATE,
+         PRICE     TYPE SFLIGHT-PRICE,
+         CURRENCY  TYPE SFLIGHT-CURRENCY,
+         PLANETYPE TYPE SFLIGHT-PLANETYPE,
+         SEATSMAX  TYPE SFLIGHT-SEATSMAX,
+         SEATSOCC  TYPE SFLIGHT-SEATSOCC,
+       END OF TY_DATA.
+
+"GT_DATA는 여러 행을 보관하고, GS_DATA는 한 행씩 처리합니다.
+DATA: GT_DATA TYPE TABLE OF TY_DATA,
+      GS_DATA TYPE TY_DATA.
+
+"실행 화면에서 항공사와 항공편 번호의 범위를 입력합니다.
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-001.
+  SELECT-OPTIONS:
+    S_CARRID FOR GS_DATA-CARRID,
+    S_CONNID FOR GS_DATA-CONNID.
+
+  "SELECT SINGLE 실습에서 사용할 항공사 코드입니다.
+  PARAMETERS P_CARR TYPE SCARR-CARRID DEFAULT 'LH'.
+SELECTION-SCREEN END OF BLOCK B1.
+
+"라디오 버튼으로 실행할 SELECT 예제를 하나 고릅니다.
+SELECTION-SCREEN BEGIN OF BLOCK B2 WITH FRAME TITLE TEXT-002.
+  PARAMETERS:
+    P_BASIC  RADIOBUTTON GROUP G1 DEFAULT 'X',
+    P_WHERE  RADIOBUTTON GROUP G1,
+    P_SINGLE RADIOBUTTON GROUP G1,
+    P_AGGR   RADIOBUTTON GROUP G1,
+    P_JOIN   RADIOBUTTON GROUP G1.
+SELECTION-SCREEN END OF BLOCK B2.
+
+START-OF-SELECTION.
+
+  "1. 기본 SELECT: 선택 범위에 해당하는 항공편을 최대 100건 조회합니다.
+  IF P_BASIC = 'X'.
+    SELECT CARRID,
+           CONNID,
+           FLDATE,
+           PRICE,
+           CURRENCY,
+           PLANETYPE,
+           SEATSMAX,
+           SEATSOCC
+      FROM SFLIGHT
+      WHERE CARRID IN @S_CARRID
+        AND CONNID IN @S_CONNID
+      ORDER BY CARRID, CONNID, FLDATE
+      INTO CORRESPONDING FIELDS OF TABLE @GT_DATA
+      UP TO 100 ROWS.
+
+    IF GT_DATA IS INITIAL.
+      WRITE: / '조회된 항공편이 없습니다.'.
+    ELSE.
+      LOOP AT GT_DATA INTO GS_DATA.
+        WRITE: / GS_DATA-CARRID,
+                 GS_DATA-CONNID,
+                 GS_DATA-FLDATE,
+                 GS_DATA-PRICE,
+                 GS_DATA-CURRENCY,
+                 GS_DATA-PLANETYPE.
+      ENDLOOP.
+
+      WRITE: / '조회 건수:', LINES( GT_DATA ).
+    ENDIF.
+
+  "2. 열 비교: 예약 좌석이 최대 좌석보다 적은 항공편만 조회합니다.
+  ELSEIF P_WHERE = 'X'.
+    SELECT F~CARRID,
+           F~CONNID,
+           F~FLDATE,
+           F~PRICE,
+           F~CURRENCY,
+           F~PLANETYPE,
+           F~SEATSMAX,
+           F~SEATSOCC
+      FROM SFLIGHT AS F
+      WHERE F~CARRID IN @S_CARRID
+        AND F~CONNID IN @S_CONNID
+        AND F~SEATSOCC < F~SEATSMAX
+      ORDER BY F~CARRID, F~CONNID, F~FLDATE
+      INTO CORRESPONDING FIELDS OF TABLE @GT_DATA
+      UP TO 100 ROWS.
+
+    IF GT_DATA IS INITIAL.
+      WRITE: / '남은 좌석이 있는 항공편이 없습니다.'.
+    ELSE.
+      LOOP AT GT_DATA INTO GS_DATA.
+        WRITE: / GS_DATA-CARRID,
+                 GS_DATA-CONNID,
+                 GS_DATA-FLDATE,
+                 GS_DATA-SEATSOCC,
+                 '/',
+                 GS_DATA-SEATSMAX.
+      ENDLOOP.
+
+      WRITE: / '조회 건수:', LINES( GT_DATA ).
+    ENDIF.
+
+  "3. SELECT SINGLE: SCARR의 키 CARRID로 항공사 한 행을 찾습니다.
+  ELSEIF P_SINGLE = 'X'.
+    SELECT SINGLE CARRID,
+                  CARRNAME,
+                  CURRCODE
+      FROM SCARR
+      WHERE CARRID = @P_CARR
+      INTO @DATA(GS_CARRIER).
+
+    "SELECT 직후 sy-subrc를 확인해 조회 성공 여부를 판단합니다.
+    IF SY-SUBRC = 0.
+      WRITE: / GS_CARRIER-CARRID,
+               GS_CARRIER-CARRNAME,
+               GS_CARRIER-CURRCODE.
+    ELSE.
+      WRITE: / '해당 항공사 코드가 SCARR에 없습니다.'.
+    ENDIF.
+
+  "4. 집계: 항공사별 운항 건수와 예약 좌석 합계를 계산합니다.
+  ELSEIF P_AGGR = 'X'.
+    SELECT CARRID,
+           COUNT( * ) AS FLIGHT_COUNT,
+           SUM( SEATSOCC ) AS TOTAL_OCCUPIED
+      FROM SFLIGHT
+      WHERE CARRID IN @S_CARRID
+        AND CONNID IN @S_CONNID
+      GROUP BY CARRID
+      ORDER BY CARRID
+      INTO TABLE @DATA(GT_TOTALS).
+
+    IF GT_TOTALS IS INITIAL.
+      WRITE: / '집계할 항공편이 없습니다.'.
+    ELSE.
+      LOOP AT GT_TOTALS INTO DATA(GS_TOTAL).
+        WRITE: / GS_TOTAL-CARRID,
+                 GS_TOTAL-FLIGHT_COUNT,
+                 GS_TOTAL-TOTAL_OCCUPIED.
+      ENDLOOP.
+    ENDIF.
+
+  "5. INNER JOIN: 항공사 이름과 항공편 정보를 함께 조회합니다.
+  ELSEIF P_JOIN = 'X'.
+    SELECT C~CARRID,
+           C~CARRNAME,
+           F~CONNID,
+           F~FLDATE,
+           F~PRICE,
+           F~CURRENCY
+      FROM SCARR AS C
+      INNER JOIN SFLIGHT AS F
+        ON C~CARRID = F~CARRID
+      WHERE F~CARRID IN @S_CARRID
+        AND F~CONNID IN @S_CONNID
+      ORDER BY C~CARRID, F~CONNID, F~FLDATE
+      INTO TABLE @DATA(GT_JOINED)
+      UP TO 100 ROWS.
+
+    IF GT_JOINED IS INITIAL.
+      WRITE: / 'JOIN 결과가 없습니다.'.
+    ELSE.
+      LOOP AT GT_JOINED INTO DATA(GS_JOINED).
+        WRITE: / GS_JOINED-CARRID,
+                 GS_JOINED-CARRNAME,
+                 GS_JOINED-CONNID,
+                 GS_JOINED-FLDATE,
+                 GS_JOINED-PRICE,
+                 GS_JOINED-CURRENCY.
+      ENDLOOP.
+
+      WRITE: / '조회 건수:', LINES( GT_JOINED ).
+    ENDIF.
+  ENDIF.`;
+
+  // SBOOK 예제는 조건부 집계와 선택 범위를 설명하는 독립 보고서입니다.
+  const sbookStarterCode=`REPORT ZQUIZ_F05_07.
+
+"조회 결과 한 행: 항공편별 흡연자와 비흡연자 예약 건수입니다.
+TYPES: BEGIN OF TY_CONNECTION,
+         CARRID     TYPE SBOOK-CARRID,
+         CONNID     TYPE SBOOK-CONNID,
+         SMOKER_CNT TYPE INT8,
+         NONSMK_CNT TYPE INT8,
+       END OF TY_CONNECTION.
+
+"집계 결과 여러 행을 저장할 내부 테이블입니다.
+DATA GT_CONNECTIONS TYPE TABLE OF TY_CONNECTION.
+
+"선택 화면과 기본 날짜 계산에 사용할 변수입니다.
+DATA: GV_CARRID    TYPE SBOOK-CARRID,
+      GV_FLDATE    TYPE SBOOK-FLDATE,
+      GV_DATE_FROM TYPE SBOOK-FLDATE,
+      GV_DATE_TO   TYPE SBOOK-FLDATE.
+
+"항공사와 출발 날짜의 선택 범위를 제공합니다.
+SELECT-OPTIONS:
+  SO_CAR FOR GV_CARRID,
+  SO_FDT FOR GV_FLDATE.
+
+"기본값: DL부터 LH까지, 그리고 지난달 전체 날짜를 선택합니다.
+INITIALIZATION.
+  SO_CAR-SIGN   = 'I'.
+  SO_CAR-OPTION = 'BT'.
+  SO_CAR-LOW    = 'DL'.
+  SO_CAR-HIGH   = 'LH'.
+  APPEND SO_CAR.
+
+  "이번 달 1일에서 하루를 빼면 지난달 마지막 날이 됩니다.
+  GV_DATE_TO = SY-DATUM.
+  GV_DATE_TO+6(2) = '01'.
+  GV_DATE_TO = GV_DATE_TO - 1.
+
+  "지난달 마지막 날의 일을 1일로 바꾸어 시작일을 만듭니다.
+  GV_DATE_FROM = GV_DATE_TO.
+  GV_DATE_FROM+6(2) = '01'.
+
+  SO_FDT-SIGN   = 'I'.
+  SO_FDT-OPTION = 'BT'.
+  SO_FDT-LOW    = GV_DATE_FROM.
+  SO_FDT-HIGH   = GV_DATE_TO.
+  APPEND SO_FDT.
+
+START-OF-SELECTION.
+  "항공사·항공편별로 흡연 여부를 나누어 건수를 셉니다.
+  SELECT CARRID,
+         CONNID,
+         SUM( CASE
+                WHEN SMOKER = 'X' THEN 1
+                ELSE 0
+              END ) AS SMOKER_CNT,
+         SUM( CASE
+                WHEN SMOKER = ' ' THEN 1
+                ELSE 0
+              END ) AS NONSMK_CNT
+    FROM SBOOK
+    WHERE CARRID IN @SO_CAR
+      AND FLDATE IN @SO_FDT
+    GROUP BY CARRID, CONNID
+    ORDER BY CARRID, CONNID
+    INTO CORRESPONDING FIELDS OF TABLE @GT_CONNECTIONS.
+
+  "각 CASE는 예약 한 건을 해당 그룹에 1 또는 0으로 표시하고,
+  "SUM이 그 표시를 더해 그룹별 인원수를 만듭니다.
+  CL_DEMO_OUTPUT=>DISPLAY( GT_CONNECTIONS ).`;
+
+  const defaultProject={id:'project-zmm001',name:'ZABAP_F05_ZMM001',description:'선언부와 선택 화면부터 SELECT, WHERE, 집계, JOIN까지 살펴보는 SFLIGHT 예제',tables:['SFLIGHT','SCARR'],primaryTable:'SFLIGHT',fields:['CARRID','CONNID','FLDATE','PRICE','CURRENCY','PLANETYPE','SEATSMAX','SEATSOCC'],resultVar:'GT_DATA',conditionVars:['S_CARRID','S_CONNID'],source:starterCode};
+  const defaultSbookProject={id:'project-sbook-quiz',name:'ZQUIZ_F05_07',description:'SBOOK 선택 범위와 CASE/SUM 조건부 집계를 익히는 예제',tables:['SBOOK'],primaryTable:'SBOOK',fields:['CARRID','CONNID','FLDATE','SMOKER','SMOKER_CNT','NONSMK_CNT'],resultVar:'GT_CONNECTIONS',conditionVars:['SO_CAR','SO_FDT'],source:sbookStarterCode};
+
+  // 첫 방문에는 두 예제를 모두 넣고, 기존 브라우저에는 없는 예제만 추가합니다.
+  if(!Array.isArray(state.projects)||!state.projects.length){state.projects=[{...defaultProject},{...defaultSbookProject}];state.selectedProjects=['project-zmm001','project-sbook-quiz'];state.activeProject='project-zmm001';persist()}
+  else {
+    let changed=false;
+    const untouchedDefault=state.projects.find(p=>p.id==='project-zmm001'&&(p.source===previousStarterCode||p.source===previousDefaultProjectCode));
+    if(untouchedDefault){Object.assign(untouchedDefault,defaultProject);changed=true}
+    if(!state.projects.some(p=>p.id===defaultSbookProject.id)){state.projects.push({...defaultSbookProject});changed=true}
+    if(changed)persist();
+  }
   if(!Array.isArray(state.selectedProjects))state.selectedProjects=[state.projects[0].id];
   const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function loadState(){try{return {...defaults,...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{return {...defaults}}}

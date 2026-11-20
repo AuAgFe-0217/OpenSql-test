@@ -1,10 +1,10 @@
 (()=>{
   const KEY='openSqlLab.v1';
   const TABLES={
-    SCARR:{desc:'항공사 기본 정보',fields:{CARRID:'항공사 코드 · 키',CARRNAME:'항공사 이름',CURRCODE:'통화 코드',URL:'웹사이트'}},
-    SPFLI:{desc:'항공편 연결 및 노선 정보',fields:{CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',CITYFROM:'출발 도시',CITYTO:'도착 도시',DISTANCE:'거리',DISTID:'거리 단위',FLTIME:'비행 시간'}},
-    SFLIGHT:{desc:'항공편 날짜별 운항 정보',fields:{CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',PRICE:'가격',CURRENCY:'통화',PLANETYPE:'항공기 유형',SEATSMAX:'최대 좌석 수',SEATSOCC:'점유 좌석 수'}},
-    SBOOK:{desc:'항공편 예약 정보',fields:{CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',BOOKID:'예약 번호 · 키',CUSTOMID:'고객 번호',FORCURAM:'외화 금액',FORCURKEY:'외화 통화',CANCELLED:'취소 여부'}}
+    SCARR:{desc:'항공사 기본 정보',fields:{MANDT:'클라이언트 · 키',CARRID:'항공사 코드 · 키',CARRNAME:'항공사 이름',CURRCODE:'통화 코드',URL:'웹사이트'}},
+    SPFLI:{desc:'항공편 연결 및 노선 정보',fields:{MANDT:'클라이언트 · 키',CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',COUNTRYFR:'출발 국가',CITYFROM:'출발 도시',AIRPFROM:'출발 공항',COUNTRYTO:'도착 국가',CITYTO:'도착 도시',AIRPTO:'도착 공항',FLTIME:'비행 시간',DEPTIME:'출발 시각',ARRTIME:'도착 시각',DISTANCE:'거리',DISTID:'거리 단위',FLTYPE:'항공편 유형',PERIOD:'도착 추가 일수'}},
+    SFLIGHT:{desc:'항공편 날짜별 운항 정보',fields:{MANDT:'클라이언트 · 키',CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',PRICE:'가격',CURRENCY:'통화',PLANETYPE:'항공기 유형',SEATSMAX:'이코노미 최대 좌석',SEATSOCC:'이코노미 예약 좌석',PAYMENTSUM:'예약 결제 합계',SEATSMAX_B:'비즈니스 최대 좌석',SEATSOCC_B:'비즈니스 예약 좌석',SEATSMAX_F:'일등석 최대 좌석',SEATSOCC_F:'일등석 예약 좌석'}},
+    SBOOK:{desc:'항공편 예약 정보',fields:{MANDT:'클라이언트 · 키',CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',BOOKID:'예약 번호 · 키',CUSTOMID:'고객 번호',CUSTTYPE:'고객 유형',SMOKER:'흡연 여부',LUGGWEIGHT:'수하물 무게',WUNIT:'무게 단위',INVOICE:'청구서 발행 여부',CLASS:'좌석 등급',FORCURAM:'외화 금액',FORCURKEY:'외화 통화',LOCCURAM:'현지 통화 금액',LOCCURKEY:'현지 통화 코드',ORDER_DATE:'예약 일자',COUNTER:'판매 카운터 번호',AGENCYNUM:'여행사 번호',CANCELLED:'취소 여부',RESERVED:'예약 상태',PASSNAME:'탑승자 이름',PASSFORM:'호칭',PASSBIRTH:'탑승자 생년월일'}}
   };
   const DATA={
     SCARR:[{CARRID:'AA',CARRNAME:'아메리칸 항공',CURRCODE:'USD',URL:'www.aa.com'},{CARRID:'JL',CARRNAME:'일본항공',CURRCODE:'JPY',URL:'www.jal.com'},{CARRID:'LH',CARRNAME:'루프트한자',CURRCODE:'EUR',URL:'www.lufthansa.com'},{CARRID:'QF',CARRNAME:'콴타스 항공',CURRCODE:'AUD',URL:'www.qantas.com'},{CARRID:'SQ',CARRNAME:'싱가포르 항공',CURRCODE:'SGD',URL:'www.singaporeair.com'}],
@@ -12,6 +12,22 @@
     SFLIGHT:[{CARRID:'AA',CONNID:'0017',FLDATE:'2026-12-02',PRICE:540,CURRENCY:'USD',PLANETYPE:'747-400',SEATSMAX:380,SEATSOCC:342},{CARRID:'AA',CONNID:'0017',FLDATE:'2026-12-04',PRICE:610,CURRENCY:'USD',PLANETYPE:'747-400',SEATSMAX:380,SEATSOCC:355},{CARRID:'JL',CONNID:'0407',FLDATE:'2026-12-03',PRICE:980,CURRENCY:'JPY',PLANETYPE:'A340-600',SEATSMAX:330,SEATSOCC:287},{CARRID:'LH',CONNID:'0400',FLDATE:'2026-12-05',PRICE:820,CURRENCY:'EUR',PLANETYPE:'A340-600',SEATSMAX:330,SEATSOCC:330},{CARRID:'QF',CONNID:'0012',FLDATE:'2026-12-06',PRICE:740,CURRENCY:'AUD',PLANETYPE:'747-400',SEATSMAX:380,SEATSOCC:301},{CARRID:'SQ',CONNID:'0025',FLDATE:'2026-12-08',PRICE:690,CURRENCY:'SGD',PLANETYPE:'A340-600',SEATSMAX:330,SEATSOCC:310},{CARRID:'AA',CONNID:'0064',FLDATE:'2026-12-07',PRICE:320,CURRENCY:'USD',PLANETYPE:'A320-200',SEATSMAX:180,SEATSOCC:142}],
     SBOOK:[{CARRID:'AA',CONNID:'0017',FLDATE:'2026-12-02',BOOKID:'000001',CUSTOMID:'00001001',FORCURAM:540,FORCURKEY:'USD',CANCELLED:''},{CARRID:'AA',CONNID:'0017',FLDATE:'2026-12-02',BOOKID:'000002',CUSTOMID:'00001002',FORCURAM:540,FORCURKEY:'USD',CANCELLED:'X'},{CARRID:'JL',CONNID:'0407',FLDATE:'2026-12-03',BOOKID:'000003',CUSTOMID:'00001003',FORCURAM:980,FORCURKEY:'JPY',CANCELLED:''},{CARRID:'LH',CONNID:'0400',FLDATE:'2026-12-05',BOOKID:'000004',CUSTOMID:'00001004',FORCURAM:820,FORCURKEY:'EUR',CANCELLED:''}]
   };
+  // Every standard DDIC column is present in the mock rows so SELECT validation,
+  // autocomplete and displayed results use the same complete field catalog.
+  const numericFields=new Set(['PRICE','SEATSMAX','SEATSOCC','PAYMENTSUM','SEATSMAX_B','SEATSOCC_B','SEATSMAX_F','SEATSOCC_F','FLTIME','DISTANCE','PERIOD','LUGGWEIGHT','FORCURAM','LOCCURAM']);
+  Object.entries(DATA).forEach(([table,rows])=>rows.forEach((row,i)=>{
+    Object.keys(TABLES[table].fields).forEach(field=>{if(!(field in row))row[field]=field==='MANDT'?'000':numericFields.has(field)?0:'';});
+    if(table==='SPFLI')Object.assign(row,[
+      {COUNTRYFR:'US',AIRPFROM:'JFK',COUNTRYTO:'US',AIRPTO:'SFO',DEPTIME:'090000',ARRTIME:'144000',FLTYPE:'',PERIOD:0},
+      {COUNTRYFR:'JP',AIRPFROM:'HND',COUNTRYTO:'DE',AIRPTO:'FRA',DEPTIME:'110000',ARRTIME:'170000',FLTYPE:'X',PERIOD:0},
+      {COUNTRYFR:'DE',AIRPFROM:'FRA',COUNTRYTO:'US',AIRPTO:'JFK',DEPTIME:'100000',ARRTIME:'130000',FLTYPE:'',PERIOD:0},
+      {COUNTRYFR:'AU',AIRPFROM:'SYD',COUNTRYTO:'SG',AIRPTO:'SIN',DEPTIME:'080000',ARRTIME:'160000',FLTYPE:'',PERIOD:0},
+      {COUNTRYFR:'SG',AIRPFROM:'SIN',COUNTRYTO:'JP',AIRPTO:'HND',DEPTIME:'120000',ARRTIME:'190000',FLTYPE:'',PERIOD:0},
+      {COUNTRYFR:'US',AIRPFROM:'ORD',COUNTRYTO:'US',AIRPTO:'JFK',DEPTIME:'070000',ARRTIME:'093000',FLTYPE:'',PERIOD:0}
+    ][i]);
+    if(table==='SFLIGHT'){row.PAYMENTSUM=row.PRICE*row.SEATSOCC;row.SEATSMAX_B=40;row.SEATSOCC_B=Math.min(38,Math.round(row.SEATSOCC/12));row.SEATSMAX_F=20;row.SEATSOCC_F=Math.min(18,Math.round(row.SEATSOCC/30));}
+    if(table==='SBOOK')Object.assign(row,{SMOKER:i%2?'':'X',CUSTTYPE:i%2?'B':'P',LUGGWEIGHT:18+i*3,WUNIT:'KG',INVOICE:'X',CLASS:i%2?'C':'Y',LOCCURAM:row.FORCURAM,LOCCURKEY:row.FORCURKEY,ORDER_DATE:'2026-11-20',COUNTER:'00000001',AGENCYNUM:'00000001',RESERVED:'',PASSNAME:['Alex Morgan','Jamie Lee','Mina Park','Noah Kim'][i],PASSFORM:i%2?'MS':'MR',PASSBIRTH:['1990-04-12','1988-09-03','1995-02-21','1992-07-16'][i]});
+  }));
   window.OPEN_SQL_DATA=DATA;
   const TOPICS=['SELECT 기초','조건과 범위','집계와 그룹','JOIN과 서브쿼리'];
   const templates=[

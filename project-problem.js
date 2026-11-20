@@ -15,12 +15,12 @@
   const T = { basic: 'SELECT 기초', cond: '조건과 범위', agg: '집계와 그룹', join: 'JOIN과 서브쿼리', syn: 'ABAP 7.4 문법', types: 'ABAP 자료형과 내부 테이블', res: '결과 처리', perf: '성능과 코드 리뷰' };
 
   const SCHEMA = {
-    SCARR: { key: ['CARRID'], group: [], f: { CARRID: 'id', CARRNAME: 'text', CURRCODE: 'cur', URL: 'text' } },
-    SPFLI: { key: ['CARRID', 'CONNID'], group: ['COUNTRYFR', 'CITYFROM', 'COUNTRYTO', 'DISTID'], f: { CARRID: 'id', CONNID: 'id', COUNTRYFR: 'id', CITYFROM: 'text', AIRPFROM: 'id', COUNTRYTO: 'id', CITYTO: 'text', AIRPTO: 'id', FLTIME: 'num', DEPTIME: 'time', ARRTIME: 'time', DISTANCE: 'num', DISTID: 'id', FLTYPE: 'flag', PERIOD: 'num' } },
-    SFLIGHT: { key: ['CARRID', 'CONNID', 'FLDATE'], group: ['CARRID', 'PLANETYPE', 'CURRENCY', 'CONNID'], f: { CARRID: 'id', CONNID: 'id', FLDATE: 'date', PRICE: 'num', CURRENCY: 'cur', PLANETYPE: 'id', SEATSMAX: 'num', SEATSOCC: 'num', PAYMENTSUM: 'num', SEATSMAX_B: 'num', SEATSOCC_B: 'num', SEATSMAX_F: 'num', SEATSOCC_F: 'num' } },
-    SBOOK: { key: ['CARRID', 'CONNID', 'FLDATE', 'BOOKID'], group: ['CARRID', 'CLASS', 'CUSTTYPE', 'FORCURKEY'], f: { CARRID: 'id', CONNID: 'id', FLDATE: 'date', BOOKID: 'id', CUSTOMID: 'id', CUSTTYPE: 'id', SMOKER: 'flag', LUGGWEIGHT: 'num', WUNIT: 'id', INVOICE: 'flag', CLASS: 'id', FORCURAM: 'num', FORCURKEY: 'cur', LOCCURAM: 'num', LOCCURKEY: 'cur', ORDER_DATE: 'date', CANCELLED: 'flag', PASSNAME: 'text' } }
+    SCARR: { key: ['MANDT', 'CARRID'], group: [], f: { MANDT: 'id', CARRID: 'id', CARRNAME: 'text', CURRCODE: 'cur', URL: 'text' } },
+    SPFLI: { key: ['MANDT', 'CARRID', 'CONNID'], group: ['COUNTRYFR', 'CITYFROM', 'COUNTRYTO', 'DISTID'], f: { MANDT: 'id', CARRID: 'id', CONNID: 'id', COUNTRYFR: 'id', CITYFROM: 'text', AIRPFROM: 'id', COUNTRYTO: 'id', CITYTO: 'text', AIRPTO: 'id', FLTIME: 'num', DEPTIME: 'time', ARRTIME: 'time', DISTANCE: 'num', DISTID: 'id', FLTYPE: 'flag', PERIOD: 'num' } },
+    SFLIGHT: { key: ['MANDT', 'CARRID', 'CONNID', 'FLDATE'], group: ['CARRID', 'PLANETYPE', 'CURRENCY', 'CONNID'], f: { MANDT: 'id', CARRID: 'id', CONNID: 'id', FLDATE: 'date', PRICE: 'num', CURRENCY: 'cur', PLANETYPE: 'id', SEATSMAX: 'num', SEATSOCC: 'num', PAYMENTSUM: 'num', SEATSMAX_B: 'num', SEATSOCC_B: 'num', SEATSMAX_F: 'num', SEATSOCC_F: 'num' } },
+    SBOOK: { key: ['MANDT', 'CARRID', 'CONNID', 'FLDATE', 'BOOKID'], group: ['CARRID', 'CLASS', 'CUSTTYPE', 'FORCURKEY'], f: { MANDT: 'id', CARRID: 'id', CONNID: 'id', FLDATE: 'date', BOOKID: 'id', CUSTOMID: 'id', CUSTTYPE: 'id', SMOKER: 'flag', LUGGWEIGHT: 'num', WUNIT: 'id', INVOICE: 'flag', CLASS: 'id', FORCURAM: 'num', FORCURKEY: 'cur', LOCCURAM: 'num', LOCCURKEY: 'cur', ORDER_DATE: 'date', COUNTER: 'id', AGENCYNUM: 'id', CANCELLED: 'flag', RESERVED: 'flag', PASSNAME: 'text', PASSFORM: 'text', PASSBIRTH: 'date' } }
   };
-  const LABEL = { CARRID: '항공사 코드', CONNID: '항공편 번호', FLDATE: '운항 날짜', PRICE: '운임', CURRENCY: '통화', PLANETYPE: '기종', SEATSMAX: '최대 좌석', SEATSOCC: '예약 좌석', PAYMENTSUM: '결제 합계', CITYFROM: '출발 도시', CITYTO: '도착 도시', DISTANCE: '거리', FLTIME: '비행 시간', COUNTRYFR: '출발 국가', COUNTRYTO: '도착 국가', CARRNAME: '항공사 이름', CURRCODE: '통화 코드', BOOKID: '예약 번호', CUSTOMID: '고객 번호', CUSTTYPE: '고객 유형', CLASS: '좌석 등급', FORCURAM: '외화 금액', LOCCURAM: '현지 통화 금액', ORDER_DATE: '예약 일자', CANCELLED: '취소 여부', SMOKER: '흡연 여부', PASSNAME: '탑승자 이름', LUGGWEIGHT: '수하물 무게', FLTYPE: '전세기 여부', INVOICE: '청구서 발행 여부' };
+  const LABEL = { MANDT: '클라이언트', CARRID: '항공사 코드', CONNID: '항공편 번호', FLDATE: '운항 날짜', PRICE: '운임', CURRENCY: '통화', PLANETYPE: '기종', SEATSMAX: '최대 좌석', SEATSOCC: '예약 좌석', PAYMENTSUM: '결제 합계', SEATSMAX_B: '비즈니스석 최대 좌석', SEATSOCC_B: '비즈니스석 예약 좌석', SEATSMAX_F: '일등석 최대 좌석', SEATSOCC_F: '일등석 예약 좌석', CITYFROM: '출발 도시', CITYTO: '도착 도시', AIRPFROM: '출발 공항', AIRPTO: '도착 공항', DISTANCE: '거리', DISTID: '거리 단위', FLTIME: '비행 시간', DEPTIME: '출발 시각', ARRTIME: '도착 시각', COUNTRYFR: '출발 국가', COUNTRYTO: '도착 국가', CARRNAME: '항공사 이름', CURRCODE: '통화 코드', URL: '웹사이트', BOOKID: '예약 번호', CUSTOMID: '고객 번호', CUSTTYPE: '고객 유형', CLASS: '좌석 등급', FORCURAM: '외화 금액', LOCCURAM: '현지 통화 금액', FORCURKEY: '외화 통화', LOCCURKEY: '항공사 현지 통화', ORDER_DATE: '예약 일자', COUNTER: '판매 카운터 번호', AGENCYNUM: '여행사 번호', CANCELLED: '취소 여부', RESERVED: '예약 여부', SMOKER: '흡연 여부', PASSNAME: '탑승자 이름', PASSFORM: '호칭', PASSBIRTH: '탑승자 생년월일', LUGGWEIGHT: '수하물 무게', WUNIT: '무게 단위', FLTYPE: '전세기 여부', PERIOD: '도착 추가 일수', INVOICE: '청구서 발행 여부' };
   const ALIAS = { CARRID: 'AIRLINE', CONNID: 'FLIGHT_NO', FLDATE: 'FLIGHT_DATE', PRICE: 'TICKET_PRICE', CITYFROM: 'ORIGIN', CITYTO: 'DESTINATION', CARRNAME: 'AIRLINE_NAME', SEATSMAX: 'SEATS_TOTAL', SEATSOCC: 'SEATS_TAKEN', DISTANCE: 'DIST', CLASS: 'CABIN', BOOKID: 'BOOKING_NO', CUSTOMID: 'CUSTOMER', FORCURAM: 'FOREIGN_AMT', CURRENCY: 'CURR', PLANETYPE: 'PLANE' };
   const TA = { SCARR: 'C', SPFLI: 'P', SFLIGHT: 'F', SBOOK: 'B' };
   const L = f => (LABEL[f] ? LABEL[f] + '(' + f + ')' : f);
@@ -113,7 +113,7 @@
   function ctxOf(project, seed) {
     let table = String(project.primaryTable || (project.tables || [])[0] || 'SFLIGHT').toUpperCase();
     let info = SCHEMA[table] || null;
-    let fields = projectFields(project).filter(f => !info || !!info.f[f]);
+    let fields = info ? Object.keys(info.f) : projectFields(project);
     let usedFallback = false;
     if (!fields.length) {
       if (info) fields = Object.keys(info.f);

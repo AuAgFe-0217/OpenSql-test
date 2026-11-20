@@ -29,6 +29,21 @@
   const rxEsc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const uniq = a => [...new Set(a)];
   const DB = () => window.OPEN_SQL_DATA || {};
+  const ABAP_NAME = /^(?:P|S|LV|LT|LS|GT|GS|GV|IV|EV|CV|CS|IS|ES|ET|IT|WA|LO|MO)_[A-Z0-9_]+$/i;
+  const projectFields = project => {
+    const declared = new Set([...(project.conditionVars || []), ...((String(project.source || '').toUpperCase().match(/\b(?:P|S|LV|LT|LS|GT|GS|GV|IV|EV|CV|CS|IS|ES|ET|IT|WA|LO|MO)_[A-Z0-9_]+\b/g)) || [])].map(x => String(x).replace(/^@/, '').toUpperCase()));
+    return (project.fields || []).map(x => String(x).toUpperCase()).filter(x => !ABAP_NAME.test(x) && !declared.has(x));
+  };
+  const validSourceQuery = (project, sql) => {
+    const tables = [...sql.matchAll(/\b(?:FROM|JOIN)\s+([A-Z][A-Z0-9_]*)/gi)].map(m => m[1].toUpperCase());
+    const known = new Set(tables.flatMap(t => SCHEMA[t] ? Object.keys(SCHEMA[t].f) : []));
+    if (!known.size) projectFields(project).forEach(f => known.add(f));
+    const list = (sql.match(/^\s*SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?([\s\S]*?)\s+FROM\b/i) || [])[1] || '';
+    if (!list.trim() || list.trim() === '*') return !!known.size;
+    const stripped = list.replace(/\bAS\s+[A-Z][A-Z0-9_]*\b/gi, ' ').replace(/\b(?:COUNT|SUM|AVG|MIN|MAX|DISTINCT|CASE|WHEN|THEN|ELSE|END|CAST|DEC|FLTP)\b/gi, ' ');
+    const fields = [...stripped.matchAll(/(?:[A-Z][A-Z0-9_]*~)?([A-Z][A-Z0-9_]*)/gi)].map(m => m[1].toUpperCase());
+    return fields.length > 0 && fields.every(f => known.has(f));
+  };
   const kindOf = (t, f) => (SCHEMA[t] && SCHEMA[t].f[f]) || (/PRICE|AMOUNT|AM$|SEATS|DISTANCE|TIME|COUNT|QUANT|QTY|MENGE|BETRG|WEIGHT|SUM/i.test(f) ? 'num' : /DATE|DAT$/i.test(f) ? 'date' : 'text');
   const colVals = (t, f) => uniq((DB()[t] || []).map(r => r[f]).filter(v => v !== undefined && v !== null && v !== ''));
   const quant = (t, f, p) => { const v = (DB()[t] || []).map(r => Number(r[f])).filter(Number.isFinite).sort((a, b) => a - b); return v.length ? v[Math.min(v.length - 1, Math.floor(v.length * p))] : 0; };
@@ -96,14 +111,19 @@
   ].filter(Boolean).join('\n') + '.';
 
   function ctxOf(project, seed) {
-    const table = String(project.primaryTable || (project.tables || [])[0] || 'SFLIGHT').toUpperCase();
-    const info = SCHEMA[table] || null;
-    const fields = (project.fields && project.fields.length ? project.fields : (info ? Object.keys(info.f).slice(0, 6) : ['CARRID', 'CONNID'])).map(x => String(x).toUpperCase());
+    let table = String(project.primaryTable || (project.tables || [])[0] || 'SFLIGHT').toUpperCase();
+    let info = SCHEMA[table] || null;
+    let fields = projectFields(project).filter(f => !info || !!info.f[f]);
+    let usedFallback = false;
+    if (!fields.length) {
+      if (info) fields = Object.keys(info.f);
+      else { table = 'SFLIGHT'; info = SCHEMA.SFLIGHT; fields = Object.keys(info.f); usedFallback = true; }
+    }
     const r = rng(seed);
     const offset = parseInt(String(seed).slice(0, 2), 16) % fields.length;
     const pick = (start, count = 1) => Array.from({ length: Math.min(count, fields.length) }, (_, i) => fields[(start + i) % fields.length]);
     const kindFields = k => { const own = fields.filter(f => kindOf(table, f) === k); return own.length ? own : (info ? Object.keys(info.f).filter(f => info.f[f] === k) : []); };
-    const c = { project, seed, r, table, info, fields, offset, pick, kindFields, rv: String(project.resultVar || 'GT_DATA').toUpperCase(), focused: pick(offset, Math.min(2, fields.length)), keyField: fields[offset], where: getWhere(project.source), cvars: project.conditionVars || [] };
+    const c = { project, seed, r, table, info, fields, offset, pick, kindFields, rv: String(project.resultVar || 'GT_DATA').toUpperCase(), focused: pick(offset, Math.min(2, fields.length)), keyField: fields[offset], where: usedFallback ? '' : getWhere(project.source), cvars: usedFallback ? [] : (project.conditionVars || []) };
     c.num = kindFields('num')[0];
     const gcand = info ? uniq([...fields.filter(f => info.group.includes(f)), ...info.group]) : [];
     c.gf = gcand.length ? gcand[offset % gcand.length] : c.keyField;
@@ -521,9 +541,10 @@
 
   /* 프로젝트 코드에서 각 SELECT 패턴을 별도 문제로 추가 */
   const sourceQueries = source => strip(source).match(/\bSELECT\b[\s\S]*?\./gi) || [];
+  const usableSourceQueries = project => sourceQueries(project.source).filter(sql => validSourceQuery(project, sql));
   const sourceLevel = sql => /\bSELECT\s+SINGLE\b/i.test(sql) || /\bORDER\s+BY\b/i.test(sql) ? '기초' : /\bJOIN\b|\bGROUP\s+BY\b/i.test(sql) ? '중급' : '기초';
   function sourceSpec(project, seed, index) {
-    const sql = (sourceQueries(project.source)[index] || '').trim().replace(/\.$/, '');
+    const sql = (usableSourceQueries(project)[index] || '').trim().replace(/\.$/, '');
     if (!sql) return null;
     const from = (sql.match(/\bFROM\s+([A-Z][A-Z0-9_]*)/i) || [])[1] || project.primaryTable || 'SFLIGHT';
     const selectPart = (sql.match(/^\s*SELECT\s+[\s\S]*?\s+FROM\b/i) || [])[0]?.trim() || 'SELECT';
@@ -561,12 +582,12 @@
       if (!writingKinds.has(d.kind)) return false;
       try { return !!d.ok(c); } catch (_) { return false; }
     });
-    sourceQueries(project.source).forEach((_, i) => ids.push('source_query_' + i));
+    usableSourceQueries(project).forEach((_, i) => ids.push('source_query_' + i));
     return ids;
   }
   function level(project, seed, variant) {
     const source = sourceVariant(variant);
-    if (source) return sourceLevel(sourceQueries(project.source)[Number(source[1])] || '');
+    if (source) return sourceLevel(usableSourceQueries(project)[Number(source[1])] || '');
     const defn = REG[variant];
     return defn ? defn.level : '기초';
   }

@@ -12,7 +12,7 @@
   'use strict';
 
   /* ================= 1. 코어 ================= */
-  const T = { basic: 'SELECT 기초', cond: '조건과 범위', agg: '집계와 그룹', join: 'JOIN과 서브쿼리', syn: 'ABAP 7.4 문법', res: '결과 처리', perf: '성능과 코드 리뷰' };
+  const T = { basic: 'SELECT 기초', cond: '조건과 범위', agg: '집계와 그룹', join: 'JOIN과 서브쿼리', syn: 'ABAP 7.4 문법', types: 'ABAP 자료형과 내부 테이블', res: '결과 처리', perf: '성능과 코드 리뷰' };
 
   const SCHEMA = {
     SCARR: { key: ['CARRID'], group: [], f: { CARRID: 'id', CARRNAME: 'text', CURRCODE: 'cur', URL: 'text' } },
@@ -156,7 +156,7 @@
       criteria: checks.map(x => x[0]),
       check: code => { const p = canon(code); return checks.map(([, fn, raw]) => { try { return !!fn(raw ? code : p); } catch (e) { return false; } }); },
       req: spec.req, snippet: spec.snippet || '', preview: spec.preview || null, note: spec.note || '', bindings, expects: spec.expects != null ? String(spec.expects) : null,
-      run: () => (ref && ref.ok ? ref.rows : [{ 안내: '이 문제는 가상 실행 결과를 제공하지 않습니다.' }]),
+      submissionType: spec.submissionType || 'sql', run: () => (spec.submissionType === 'abap' ? [] : ref && ref.ok ? ref.rows : [{ 안내: '이 문제는 가상 실행 결과를 제공하지 않습니다.' }]),
       projectId: c.project.id, resultVar: c.rv, sourceContext: c.project.source || '', variant,
       id: 'SQL-' + String(c.seed).slice(0, 6).toUpperCase(), seed: c.seed, created: new Date().toISOString(), params: {}, hintLevel: 0
     };
@@ -539,6 +539,66 @@
     return { name: '정렬 후 첫 행 예측하기', cols: showCols, expects: val, expectsLabel: `첫 행의 ${lab}`, preview: previewRows(c.table, showCols), snippet: fmt({ cols: [lab], from: c.table, order: `${n} ${desc ? 'DESCENDING' : 'ASCENDING'}`, into: 'TABLE @GT_RESULT', upTo: 1 }), req: `아래 SELECT 실행 후 @GT_RESULT의 첫(유일한) 행에서 ${lab} 값은 무엇일까요? 아래 가상 데이터를 보고 입력창에 값만 적어 제출하세요.`, checks: [] };
   });
 
+  /* SUM + CASE: 조건에 맞는 행을 1/0으로 바꿔 그룹별 개수를 집계 */
+  def('sbook_case_sum', T.agg, '중급', '작성', c => c.table === 'SBOOK' || /\bFROM\s+SBOOK\b/i.test(c.project.source || ''), c => {
+    const smoker = "SUM( CASE WHEN SMOKER = 'X' THEN 1 ELSE 0 END ) AS SMOKER_CNT";
+    const nonsmoker = "SUM( CASE WHEN SMOKER = ' ' THEN 1 ELSE 0 END ) AS NONSMK_CNT";
+    const into = 'CORRESPONDING FIELDS OF TABLE @GT_CONNECTIONS';
+    return {
+      name: 'CASE와 SUM으로 흡연 여부별 인원 집계', table: 'SBOOK', cols: ['CARRID', 'CONNID', 'SMOKER_CNT', 'NONSMK_CNT'],
+      req: 'SBOOK에서 항공사·항공편별 흡연자와 비흡연자 수를 한 번의 조회로 집계하세요. 예약 행을 한 건씩 가져와 ABAP에서 세지 말고 조건별 집계를 작성하세요.',
+      answer: fmt({ cols: ['CARRID', 'CONNID', smoker, nonsmoker], from: 'SBOOK', where: 'CARRID IN @SO_CAR AND FLDATE IN @SO_FDT', group: 'CARRID, CONNID', order: 'CARRID, CONNID', into }),
+      h1: 'CASE는 각 예약 행을 조건에 따라 숫자로 바꿉니다. SMOKER = \'X\'이면 1, 아니면 0을 반환합니다.',
+      h2: 'SUM은 GROUP BY로 묶인 항공사·항공편 안에서 그 1들을 더합니다. 비흡연자는 공백을 1, 나머지는 0으로 세면 됩니다.',
+      checks: [K.sel, K.from('SBOOK'), K.re('흡연자를 CASE와 SUM으로 세기', /SUM \( CASE WHEN SMOKER = 'X' THEN 1 ELSE 0 END \) AS SMOKER_CNT/), K.re('비흡연자를 CASE와 SUM으로 세기', /SUM \( CASE WHEN SMOKER = ' ' THEN 1 ELSE 0 END \) AS NONSMK_CNT/), K.re('항공사·항공편별 GROUP BY', /GROUP BY CARRID , CONNID/), K.re('선택 범위 적용', /CARRID IN @SO_CAR AND FLDATE IN @SO_FDT/), K.has('집계 결과 내부 테이블로 저장', `INTO ${into}`)],
+      semantic: false
+    };
+  });
+
+  const abapSnippet = (name, req, answer, h1, h2, checks) => ({
+    name, req, answer, checks, h1, h2, semantic: false, submissionType: 'abap'
+  });
+  def('abap_types_structure', T.types, '기초', 'ABAP 작성', null, c => abapSnippet(
+    'TYPES로 집계 결과 행 구조 만들기',
+    '흡연자 집계 프로그램의 한 행 구조를 TY_CONNECTION으로 정의하세요. CARRID와 CONNID는 SBOOK 필드 타입을 참조하고, SMOKER_CNT와 NONSMK_CNT는 INT8로 선언하세요.',
+    'TYPES: BEGIN OF ty_connection,\n  carrid     TYPE sbook-carrid,\n  connid     TYPE sbook-connid,\n  smoker_cnt TYPE int8,\n  nonsmk_cnt TYPE int8,\nEND OF ty_connection.',
+    'TYPES는 새 자료형의 모양만 정의합니다. 이 문장만으로 메모리에 담을 변수가 만들어지지는 않습니다.',
+    'DB 필드와 같은 타입을 쓰려면 TYPE sbook-carrid처럼 참조하고, 집계 건수는 넉넉한 정수 타입 INT8로 둘 수 있습니다.',
+    [K.re('TYPES 구조 시작', /TYPES : BEGIN OF TY_CONNECTION/), K.re('CARRID 타입 참조', /CARRID TYPE SBOOK-CARRID/), K.re('CONNID 타입 참조', /CONNID TYPE SBOOK-CONNID/), K.re('흡연자 집계 타입', /SMOKER_CNT TYPE INT8/), K.re('비흡연자 집계 타입', /NONSMK_CNT TYPE INT8/), K.re('TYPES 구조 종료', /END OF TY_CONNECTION/)]
+  ));
+  def('abap_table_of_line_type', T.types, '기초', 'ABAP 작성', null, c => abapSnippet(
+    'TYPE TABLE OF로 내부 테이블 선언하기',
+    '앞에서 정의한 TY_CONNECTION 행을 여러 개 담을 전역 내부 테이블 GT_CONNECTIONS를 선언하세요.',
+    'DATA gt_connections TYPE TABLE OF ty_connection.',
+    'TYPE TABLE OF는 한 행의 타입을 바탕으로 여러 행을 담을 내부 테이블을 선언합니다.',
+    'TYPES TY_CONNECTION은 행 구조, DATA GT_CONNECTIONS는 실제 데이터를 보관할 테이블 변수입니다.',
+    [K.re('실제 변수는 DATA로 선언', /DATA GT_CONNECTIONS/), K.re('행 타입은 TY_CONNECTION', /TYPE TABLE OF TY_CONNECTION/)]
+  ));
+  def('abap_like_line_of', T.types, '기초', 'ABAP 작성', null, c => abapSnippet(
+    'LIKE LINE OF로 한 행 작업영역 선언하기',
+    'GT_CONNECTIONS의 한 행을 LOOP AT에서 처리할 작업영역 GS_CONNECTION을 선언하세요. 기존 행 타입을 다시 적지 말고 LIKE LINE OF를 사용하세요.',
+    'DATA gs_connection LIKE LINE OF gt_connections.',
+    'LIKE LINE OF는 기존 내부 테이블의 한 행과 같은 구조의 작업영역을 선언합니다.',
+    '여러 행을 담는 새 테이블에는 TYPE TABLE OF, 기존 테이블에서 한 행을 받을 작업영역에는 LIKE LINE OF를 사용하세요.',
+    [K.re('작업영역은 DATA로 선언', /DATA GS_CONNECTION/), K.re('한 행 구조를 참조', /LIKE LINE OF GT_CONNECTIONS/)]
+  ));
+  def('abap_reusable_table_type', T.types, '중급', 'ABAP 작성', null, c => abapSnippet(
+    '재사용할 테이블 타입과 변수 분리하기',
+    'SBOOK 행을 담는 재사용 가능한 테이블 타입 TY_SBOOK_TAB을 TYPES로 정의한 뒤, 그 타입을 사용하는 GT_SBOOK 변수를 DATA로 선언하세요.',
+    'TYPES ty_sbook_tab TYPE TABLE OF sbook.\nDATA gt_sbook TYPE ty_sbook_tab.',
+    '테이블 타입을 여러 변수에서 재사용할 때 TYPES로 테이블 타입 이름을 먼저 정의합니다.',
+    'TYPES는 타입 이름만 만들고, DATA는 그 타입으로 실제 변수나 내부 테이블을 만듭니다.',
+    [K.re('재사용 테이블 타입 정의', /TYPES TY_SBOOK_TAB TYPE TABLE OF SBOOK/), K.re('변수에 정의한 타입 사용', /DATA GT_SBOOK TYPE TY_SBOOK_TAB/)]
+  ));
+  def('abap_local_table', T.types, '중급', 'ABAP 작성', null, c => abapSnippet(
+    '메서드 안에서 로컬 내부 테이블 선언하기',
+    'READ_BOOKINGS 메서드 안에서만 사용할 로컬 내부 테이블 LT_BOOKINGS와 한 행 작업영역 LS_BOOKING을 선언하세요.',
+    'METHOD read_bookings.\n  DATA lt_bookings TYPE TABLE OF sbook.\n  DATA ls_booking LIKE LINE OF lt_bookings.\nENDMETHOD.',
+    '메서드 본문 안에서 선언한 DATA는 그 메서드의 로컬 변수입니다.',
+    '메서드 바깥 보고서 전역 데이터와 달리 LT_BOOKINGS는 READ_BOOKINGS 메서드 안에서만 사용할 수 있습니다.',
+    [K.re('메서드 내부 시작', /METHOD READ_BOOKINGS/), K.re('로컬 내부 테이블', /DATA LT_BOOKINGS TYPE TABLE OF SBOOK/), K.re('로컬 작업영역', /DATA LS_BOOKING LIKE LINE OF LT_BOOKINGS/), K.re('메서드 내부 종료', /ENDMETHOD/)]
+  ));
+
   /* 프로젝트 코드에서 각 SELECT 패턴을 별도 문제로 추가 */
   const sourceQueries = source => strip(source).match(/\bSELECT\b[\s\S]*?\./gi) || [];
   const usableSourceQueries = project => sourceQueries(project.source).filter(sql => validSourceQuery(project, sql));
@@ -572,7 +632,7 @@
       answer: sql + '.', checks, bindings, semantic: true
     };
   }
-  const writingKinds = new Set(['작성', '오류 수정', '문법 변환']);
+  const writingKinds = new Set(['작성', '오류 수정', '문법 변환', 'ABAP 작성']);
   const sourceVariant = variant => /^source_query_(\d+)$/.exec(String(variant || ''));
   function variants(project) {
     const seed = '51a7c0de';

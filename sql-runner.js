@@ -242,7 +242,7 @@
         if (r !== NOTFOUND) return r;
         const b = (s.env.bindings || {});
         if (v in b) return b[v];
-        throw Error('열 또는 변수를 찾지 못했습니다: ' + v + ' (ABAP 변수라면 @' + v.toLowerCase() + ' 처럼 @를 붙이세요)');
+        throw Error('데이터 소스에서 열을 찾지 못했습니다: ' + v + '. 실제 테이블 열인지 확인하세요. 계산 결과나 로컬 구조의 필드라면 SELECT 목록에서 CASE·집계식 등으로 값을 만든 뒤 AS ' + v + ' 별칭을 지정해야 합니다. ABAP 호스트 변수라면 @' + v + '처럼 @를 붙이세요.');
       };
     }
     caseExpr() {

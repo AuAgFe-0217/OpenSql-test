@@ -18,9 +18,9 @@
     SCARR: { key: ['CARRID'], group: [], f: { CARRID: 'id', CARRNAME: 'text', CURRCODE: 'cur', URL: 'text' } },
     SPFLI: { key: ['CARRID', 'CONNID'], group: ['COUNTRYFR', 'CITYFROM', 'COUNTRYTO', 'DISTID'], f: { CARRID: 'id', CONNID: 'id', COUNTRYFR: 'id', CITYFROM: 'text', AIRPFROM: 'id', COUNTRYTO: 'id', CITYTO: 'text', AIRPTO: 'id', FLTIME: 'num', DEPTIME: 'time', ARRTIME: 'time', DISTANCE: 'num', DISTID: 'id', FLTYPE: 'flag', PERIOD: 'num' } },
     SFLIGHT: { key: ['CARRID', 'CONNID', 'FLDATE'], group: ['CARRID', 'PLANETYPE', 'CURRENCY', 'CONNID'], f: { CARRID: 'id', CONNID: 'id', FLDATE: 'date', PRICE: 'num', CURRENCY: 'cur', PLANETYPE: 'id', SEATSMAX: 'num', SEATSOCC: 'num', PAYMENTSUM: 'num', SEATSMAX_B: 'num', SEATSOCC_B: 'num', SEATSMAX_F: 'num', SEATSOCC_F: 'num' } },
-    SBOOK: { key: ['CARRID', 'CONNID', 'FLDATE', 'BOOKID'], group: ['CARRID', 'CLASS', 'CUSTTYPE', 'FORCURKEY'], f: { CARRID: 'id', CONNID: 'id', FLDATE: 'date', BOOKID: 'id', CUSTOMID: 'id', CUSTTYPE: 'id', SMOKER: 'flag', LUGGWEIGHT: 'num', WUNIT: 'id', INVOICE: 'flag', CLASS: 'id', FORCURAM: 'num', FORCURKEY: 'cur', LOCCURAM: 'num', LOCCURKEY: 'cur', ORDER_DATE: 'date', CANCELLED: 'flag', PASSNAME: 'text' } }
+    SBOOK: { key: ['CARRID', 'CONNID', 'FLDATE', 'BOOKID'], group: ['CARRID', 'CLASS', 'CUSTTYPE', 'FORCURKEY'], f: { MANDT: 'id', CARRID: 'id', CONNID: 'id', FLDATE: 'date', BOOKID: 'id', CUSTOMID: 'id', CUSTTYPE: 'id', SMOKER: 'flag', LUGGWEIGHT: 'num', WUNIT: 'id', INVOICE: 'flag', CLASS: 'id', FORCURAM: 'num', FORCURKEY: 'cur', LOCCURAM: 'num', LOCCURKEY: 'cur', ORDER_DATE: 'date', COUNTER: 'id', AGENCYNUM: 'id', CANCELLED: 'flag', RESERVED: 'flag', PASSNAME: 'text', PASSFORM: 'text', PASSBIRTH: 'date' } }
   };
-  const LABEL = { CARRID: '항공사 코드', CONNID: '항공편 번호', FLDATE: '운항 날짜', PRICE: '운임', CURRENCY: '통화', PLANETYPE: '기종', SEATSMAX: '최대 좌석', SEATSOCC: '예약 좌석', PAYMENTSUM: '결제 합계', CITYFROM: '출발 도시', CITYTO: '도착 도시', DISTANCE: '거리', FLTIME: '비행 시간', COUNTRYFR: '출발 국가', COUNTRYTO: '도착 국가', CARRNAME: '항공사 이름', CURRCODE: '통화 코드', BOOKID: '예약 번호', CUSTOMID: '고객 번호', CUSTTYPE: '고객 유형', CLASS: '좌석 등급', FORCURAM: '외화 금액', LOCCURAM: '현지 통화 금액', ORDER_DATE: '예약 일자', CANCELLED: '취소 여부', SMOKER: '흡연 여부', PASSNAME: '탑승자 이름', LUGGWEIGHT: '수하물 무게', FLTYPE: '전세기 여부', INVOICE: '청구서 발행 여부' };
+  const LABEL = { MANDT: '클라이언트', CARRID: '항공사 코드', CONNID: '항공편 번호', FLDATE: '운항 날짜', PRICE: '운임', CURRENCY: '통화', PLANETYPE: '기종', SEATSMAX: '최대 좌석', SEATSOCC: '예약 좌석', PAYMENTSUM: '결제 합계', CITYFROM: '출발 도시', CITYTO: '도착 도시', DISTANCE: '거리', FLTIME: '비행 시간', COUNTRYFR: '출발 국가', COUNTRYTO: '도착 국가', CARRNAME: '항공사 이름', CURRCODE: '통화 코드', BOOKID: '예약 번호', CUSTOMID: '고객 번호', CUSTTYPE: '고객 유형', CLASS: '좌석 등급', FORCURAM: '외화 금액', LOCCURAM: '현지 통화 금액', ORDER_DATE: '예약 일자', COUNTER: '판매 카운터', AGENCYNUM: '여행사 번호', CANCELLED: '취소 여부', RESERVED: '예약 상태', SMOKER: '흡연 여부', PASSNAME: '탑승자 이름', PASSFORM: '호칭', PASSBIRTH: '생년월일', LUGGWEIGHT: '수하물 무게', WUNIT: '무게 단위', FLTYPE: '전세기 여부', INVOICE: '청구서 발행 여부' };
   const ALIAS = { CARRID: 'AIRLINE', CONNID: 'FLIGHT_NO', FLDATE: 'FLIGHT_DATE', PRICE: 'TICKET_PRICE', CITYFROM: 'ORIGIN', CITYTO: 'DESTINATION', CARRNAME: 'AIRLINE_NAME', SEATSMAX: 'SEATS_TOTAL', SEATSOCC: 'SEATS_TAKEN', DISTANCE: 'DIST', CLASS: 'CABIN', BOOKID: 'BOOKING_NO', CUSTOMID: 'CUSTOMER', FORCURAM: 'FOREIGN_AMT', CURRENCY: 'CURR', PLANETYPE: 'PLANE' };
   const TA = { SCARR: 'C', SPFLI: 'P', SFLIGHT: 'F', SBOOK: 'B' };
   const L = f => (LABEL[f] ? LABEL[f] + '(' + f + ')' : f);
@@ -98,7 +98,11 @@
   function ctxOf(project, seed) {
     const table = String(project.primaryTable || (project.tables || [])[0] || 'SFLIGHT').toUpperCase();
     const info = SCHEMA[table] || null;
-    const fields = (project.fields && project.fields.length ? project.fields : (info ? Object.keys(info.f).slice(0, 6) : ['CARRID', 'CONNID'])).map(x => String(x).toUpperCase());
+    // A project's SELECT list can include AS aliases (for example SMOKER_CNT).
+    // Keep only real DDIC columns when generating source-column exercises.
+    const declaredFields = (project.fields || []).map(x => String(x).toUpperCase());
+    const sourceFields = info ? declaredFields.filter(x => x in info.f) : declaredFields;
+    const fields = (sourceFields.length ? sourceFields : (info ? Object.keys(info.f).slice(0, 6) : ['CARRID', 'CONNID']));
     const r = rng(seed);
     const offset = parseInt(String(seed).slice(0, 2), 16) % fields.length;
     const pick = (start, count = 1) => Array.from({ length: Math.min(count, fields.length) }, (_, i) => fields[(start + i) % fields.length]);

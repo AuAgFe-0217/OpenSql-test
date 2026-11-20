@@ -4,7 +4,7 @@
     SCARR:{desc:'항공사 기본 정보',fields:{CARRID:'항공사 코드 · 키',CARRNAME:'항공사 이름',CURRCODE:'통화 코드',URL:'웹사이트'}},
     SPFLI:{desc:'항공편 연결 및 노선 정보',fields:{CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',COUNTRYFR:'출발 국가',CITYFROM:'출발 도시',AIRPFROM:'출발 공항',COUNTRYTO:'도착 국가',CITYTO:'도착 도시',AIRPTO:'도착 공항',FLTIME:'비행 시간(분)',DEPTIME:'출발 시각',ARRTIME:'도착 시각',DISTANCE:'거리',DISTID:'거리 단위',FLTYPE:'전세기 여부(X)',PERIOD:'도착 일수 차이'}},
     SFLIGHT:{desc:'항공편 날짜별 운항 정보',fields:{CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',PRICE:'가격',CURRENCY:'통화',PLANETYPE:'항공기 유형',SEATSMAX:'최대 좌석 수',SEATSOCC:'점유 좌석 수',PAYMENTSUM:'결제 합계',SEATSMAX_B:'비즈니스 최대 좌석',SEATSOCC_B:'비즈니스 점유 좌석',SEATSMAX_F:'일등석 최대 좌석',SEATSOCC_F:'일등석 점유 좌석'}},
-    SBOOK:{desc:'항공편 예약 정보',fields:{CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',BOOKID:'예약 번호 · 키',CUSTOMID:'고객 번호',CUSTTYPE:'고객 유형(B 기업/P 개인)',SMOKER:'흡연석(X)',LUGGWEIGHT:'수하물 무게',WUNIT:'무게 단위',INVOICE:'청구서 발행(X)',CLASS:'좌석 등급(Y/C/F)',FORCURAM:'외화 금액',FORCURKEY:'외화 통화',LOCCURAM:'현지 통화 금액',LOCCURKEY:'현지 통화',ORDER_DATE:'예약 일자',CANCELLED:'취소 여부(X)',PASSNAME:'탑승자 이름'}}
+    SBOOK:{desc:'항공편 예약 정보',fields:{MANDT:'클라이언트 · 키',CARRID:'항공사 코드 · 키',CONNID:'항공편 번호 · 키',FLDATE:'출발 날짜 · 키',BOOKID:'예약 번호 · 키',CUSTOMID:'고객 번호',CUSTTYPE:'고객 유형(B 기업/P 개인)',SMOKER:'흡연석(X)',LUGGWEIGHT:'수하물 무게',WUNIT:'무게 단위',INVOICE:'청구서 발행(X)',CLASS:'좌석 등급(Y/C/F)',FORCURAM:'외화 금액',FORCURKEY:'외화 통화',LOCCURAM:'현지 통화 금액',LOCCURKEY:'현지 통화',ORDER_DATE:'예약 일자',COUNTER:'판매 카운터 번호',AGENCYNUM:'여행사 번호',CANCELLED:'취소 여부(X)',RESERVED:'예약 상태',PASSNAME:'탑승자 이름',PASSFORM:'호칭',PASSBIRTH:'탑승자 생년월일'}}
   };
   /* 가상 예제 데이터: 의도적으로 경계 사례를 포함합니다.
      - UA: 노선이 없는 항공사 / JL 0408: 운항 일정이 없는 노선 / 일부 운항편: 예약 없음 / 만석 운항편 / 취소 예약 */
@@ -51,7 +51,7 @@
       ['AA','0017','2026-12-09','000014','00001002','P','',17,'Y',595,'USD',595,'USD','','2026-11-15','LEE SOYEON'],
       ['SQ','0158','2026-12-09','000015','00001007','B','',20,'C',1520,'SGD',1520,'SGD','','2026-11-16','SEO JIWON'],
       ['AA','0017','2026-12-09','000016','00001007','B','X',28,'Y',560,'EUR',595,'USD','','2026-11-18','SEO JIWON']
-    ].map(([CARRID,CONNID,FLDATE,BOOKID,CUSTOMID,CUSTTYPE,SMOKER,LUGGWEIGHT,CLASS,FORCURAM,FORCURKEY,LOCCURAM,LOCCURKEY,CANCELLED,ORDER_DATE,PASSNAME])=>({CARRID,CONNID,FLDATE,BOOKID,CUSTOMID,CUSTTYPE,SMOKER,LUGGWEIGHT,WUNIT:'KG',INVOICE:CANCELLED?'':'X',CLASS,FORCURAM,FORCURKEY,LOCCURAM,LOCCURKEY,ORDER_DATE,CANCELLED,PASSNAME}));
+    ].map(([CARRID,CONNID,FLDATE,BOOKID,CUSTOMID,CUSTTYPE,SMOKER,LUGGWEIGHT,CLASS,FORCURAM,FORCURKEY,LOCCURAM,LOCCURKEY,CANCELLED,ORDER_DATE,PASSNAME],i)=>({MANDT:'000',CARRID,CONNID,FLDATE,BOOKID,CUSTOMID,CUSTTYPE,SMOKER,LUGGWEIGHT,WUNIT:'KG',INVOICE:CANCELLED?'':'X',CLASS,FORCURAM,FORCURKEY,LOCCURAM,LOCCURKEY,ORDER_DATE,COUNTER:String(i+1).padStart(8,'0'),AGENCYNUM:String(100+i).padStart(8,'0'),CANCELLED,RESERVED:'',PASSNAME,PASSFORM:i%2?'MS':'MR',PASSBIRTH:['1990-04-12','1988-09-03','1995-02-21','1992-07-16'][i%4]}));
     return {SCARR,SPFLI,SFLIGHT,SBOOK};
   })();
   window.OPEN_SQL_DATA=DATA;

@@ -132,6 +132,12 @@
       ref = run(spec.answer);
       if (ref.ok) checks.push(['가상 실행 결과가 기대 결과와 일치', code => { const g = run(code); return g.ok && sameRows(ref.rows, g.rows, !!spec.ordered); }, true]);
     }
+    let brief = null;
+    try {
+      const stmts = strip(spec.answer || '').split(/\.\s*(?:\n|$)/).filter(x => /\bSELECT\b(?!-)/i.test(x));
+      const first = (strip(spec.answer || '').match(/\bSELECT\b(?!-)[\s\S]*?\.(?=\s*(?:\n|$))/i) || [])[0];
+      if (spec.brief !== false && spec.expects == null && stmts.length === 1 && first) brief = describeSql(first.replace(/\.\s*$/, ''), { c, bindings: Object.fromEntries(Object.entries(bindings).map(([k, v]) => [k.toUpperCase(), v])) });
+    } catch (e) { brief = null; }
     const flat = String(spec.answer || '').replace(/\s+/g, ' ');
     const answerFields = (spec.cols || []).join(', ') || '문제에서 요청한 열';
     const keyClause = String(spec.answer || '').split('\n').map(line => line.trim()).find(line => /^(?:WHERE|INNER JOIN|LEFT OUTER JOIN|GROUP BY|HAVING|ORDER BY|UP TO)\b/i.test(line)) || '추가 조건이 없다면 FROM 뒤에 INTO TABLE을 배치합니다.';
@@ -146,6 +152,7 @@
       answer: spec.expects != null ? spec.expects + '\n\n' + (spec.snippet || '') : spec.answer,
       criteria: checks.map(x => x[0]),
       check: code => { const p = canon(code); return checks.map(([, fn, raw]) => { try { return !!fn(raw ? code : p); } catch (e) { return false; } }); },
+      reqList: spec.reqList || (brief ? brief.list : null), varNotes: spec.reqList ? (spec.varNotes || []) : (brief ? brief.notes : []),
       plain: !!spec.plain, req: spec.req, snippet: spec.snippet || '', preview: spec.preview || null, note: spec.note || '', bindings, expects: spec.expects != null ? String(spec.expects) : null,
       run: () => (ref && ref.ok ? ref.rows : [{ 안내: '이 문제는 가상 실행 결과를 제공하지 않습니다.' }]),
       projectId: c.project.id, resultVar: c.rv, sourceContext: c.project.source || '', variant,
@@ -559,6 +566,231 @@
     return pieces;
   };
 
+
+  /* ================= 요구사항 설명기 =================
+   * 정답 SELECT를 "무엇을 / 어떤 조건으로 / 왜 필요한지 / 어디에 받는지"로 풀어 써서
+   * 채점 기준이 문제 문장에 그대로 드러나게 합니다. (문법은 알려주지 않고 '무엇'만 설명)
+   */
+  const TABLE_KO = { SCARR: '항공사', SPFLI: '항공편 노선', SFLIGHT: '항공편 운항 일정', SBOOK: '항공편 예약' };
+  const OP_TAIL = { '=': '와 같은', '<>': '와 다른', '<': '보다 작은', '>': '보다 큰', '<=': ' 이하인', '>=': ' 이상인' };
+  const colKo = ref => { const f = String(ref).replace(/^\w+~/, '').toUpperCase(); return LABEL[f] ? LABEL[f] + '(' + f + ')' : f; };
+  const tko = t => (TABLE_KO[t] ? `${t}(${TABLE_KO[t]})` : t);
+  const flatSql = sql => String(sql).replace(/\s+/g, ' ').trim();
+  const showVal = v => (Array.isArray(v) ? '[' + v.map(x => "'" + x + "'").join(', ') + ']' : typeof v === 'number' ? String(v) : "'" + v + "'");
+  const ann = (tok, env) => { const t = String(tok).trim(); if (t[0] !== '@') return t; const b = env.bindings[t.slice(1).toUpperCase()]; return b === undefined ? t : `${t}(이 문제에서는 ${showVal(b)})`; };
+  const firstVal = (table, field) => { const r = (DB()[table] || [])[0]; return r ? r[field] : undefined; };
+  const noTail = s => s.replace(/\s*행만.*$/, '');
+  const ifText = s => s.replace(/같은$/, '같으면').replace(/다른$/, '다르면').replace(/큰$/, '크면').replace(/작은$/, '작으면').replace(/이상인$/, '이상이면').replace(/이하인$/, '이하이면').replace(/없는$/, '없으면').replace(/있는$/, '있으면').replace(/아닌$/, '아니면').replace(/인$/, '이면');
+
+  function splitTop(text, word) {
+    const out = []; let depth = 0, q = '', cur = '', between = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (q) { cur += ch; if (ch === q) q = ''; continue; }
+      if (ch === "'" || ch === '`') { q = ch; cur += ch; continue; }
+      if (ch === '(') depth++; else if (ch === ')') depth--;
+      if (depth === 0 && /\s/.test(ch)) {
+        const m = text.slice(i).match(new RegExp('^\\s+' + word + '\\s+', 'i'));
+        if (m) {
+          if (word.toUpperCase() === 'AND' && /\bBETWEEN\b/i.test(cur) && !between) { between = true; cur += m[0]; i += m[0].length - 1; continue; }
+          out.push(cur.trim()); cur = ''; between = false; i += m[0].length - 1; continue;
+        }
+      }
+      cur += ch;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  }
+  function splitComma(text) {
+    const out = []; let depth = 0, q = '', cur = '';
+    for (const ch of text) {
+      if (q) { cur += ch; if (ch === q) q = ''; continue; }
+      if (ch === "'" || ch === '`') { q = ch; cur += ch; continue; }
+      if (ch === '(') depth++; else if (ch === ')') depth--;
+      if (ch === ',' && depth === 0) { out.push(cur.trim()); cur = ''; } else cur += ch;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  }
+  const isWrapped = p => {
+    if (p[0] !== '(' || p[p.length - 1] !== ')') return false;
+    let d = 0, q = '';
+    for (let i = 0; i < p.length; i++) { const ch = p[i]; if (q) { if (ch === q) q = ''; continue; } if (ch === "'" || ch === '`') { q = ch; continue; } if (ch === '(') d++; else if (ch === ')') { d--; if (d === 0 && i < p.length - 1) return false; } }
+    return d === 0;
+  };
+  const parenBody = (text, open) => {
+    let d = 0, q = '';
+    for (let i = open; i < text.length; i++) { const ch = text[i]; if (q) { if (ch === q) q = ''; continue; } if (ch === "'" || ch === '`') { q = ch; continue; } if (ch === '(') d++; else if (ch === ')') { d--; if (d === 0) return { body: text.slice(open + 1, i), end: i }; } }
+    return null;
+  };
+
+  /* 서브쿼리 본문을 { 테이블, 바깥과 연결하는 키, 나머지 조건 설명, 선택 열 }로 분해 */
+  function parseSub(inner, env) {
+    const h = flatSql(inner).match(/^SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?(.*?)\s+FROM\s+(\w+)(?:\s+AS\s+(\w+))?(?:\s+WHERE\s+(.*))?$/i);
+    if (!h) return null;
+    const t = h[2].toUpperCase(), al = (h[3] || h[2]).toUpperCase(), outer = new Set(Object.keys(env.alias));
+    const env2 = { ...env, table: t, alias: { ...env.alias, [al]: t } }, corr = [], others = [];
+    splitTop(h[4] || '', 'AND').forEach(pt => {
+      const mm = pt.match(/^(\w+)~(\w+)\s*=\s*(\w+)~(\w+)$/);
+      if (mm && outer.has(mm[1].toUpperCase()) !== outer.has(mm[3].toUpperCase())) corr.push((outer.has(mm[1].toUpperCase()) ? mm[2] : mm[4]).toUpperCase());
+      else if (pt) others.push(noTail(describePred(pt, env2).v));
+    });
+    return { t, corr, others, sel: h[1].trim() };
+  }
+  const subWhere = s => [s.corr.length ? `키 ${s.corr.join(', ')}가 바깥 행과 같은` : '', ...s.others].filter(Boolean).join(', ');
+
+  function describePred(raw, env) {
+    let p = raw.trim();
+    while (isWrapped(p) && !/^\(\s*SELECT\b/i.test(p)) p = p.slice(1, -1).trim();
+    const ors = splitTop(p, 'OR');
+    if (ors.length > 1) return { v: '다음 중 하나라도 만족하는 행: ' + ors.map(o => noTail(describePred(o, env).v)).join(' 또는 ') };
+    const ands = splitTop(p, 'AND');
+    if (ands.length > 1) return { v: ands.map(o => noTail(describePred(o, env).v)).join(' 그리고 ') + ' 행만' };
+    const ID = '((?:\\w+~)?[A-Z][A-Z0-9_]*)', tableOf = ref => { const m = String(ref).match(/^(\w+)~/); return m ? (env.alias[m[1].toUpperCase()] || env.table) : env.table; };
+    const fieldOf = ref => String(ref).replace(/^\w+~/, '').toUpperCase();
+    let m;
+    if ((m = p.match(/^(NOT\s+)?EXISTS\s*\(/i))) {
+      const pb = parenBody(p, p.indexOf('(', m[0].length - 1)), s = pb && parseSub(pb.body, env);
+      return { v: s ? `${tko(s.t)}에서 [${subWhere(s)}] 행이 ${m[1] ? '하나도 없는' : '하나라도 있는'} 행만` : `서브쿼리 결과가 ${m[1] ? '없는' : '있는'} 행만`, why: '서브쿼리 안에서 바깥 테이블의 키로 연결해야 “이 행에 대해” 존재 여부를 따질 수 있습니다.' };
+    }
+    if ((m = p.match(new RegExp('^' + ID + '\\s+(NOT\\s+)?IN\\s*\\(\\s*SELECT\\b', 'i')))) {
+      const pb = parenBody(p, p.indexOf('(')), s = pb && parseSub(pb.body, env);
+      return { v: s ? `${colKo(m[1])} 값이 [${tko(s.t)}에서 ${subWhere(s) || '모든'} 행의 ${colKo(s.sel)}] 목록에 ${m[2] ? '없는' : '있는'} 행만` : `${colKo(m[1])} 값이 서브쿼리 결과 목록에 ${m[2] ? '없는' : '있는'} 행만` };
+    }
+    if ((m = p.match(new RegExp('^' + ID + '\\s*(=|<>|<=|>=|<|>)\\s*\\(\\s*SELECT\\b', 'i')))) {
+      const pb = parenBody(p, p.indexOf('(')), fm = pb && flatSql(pb.body).match(/^SELECT\s+(AVG|SUM|MIN|MAX|COUNT)\s*\(\s*(.+?)\s*\)\s+FROM\s+(\w+)/i);
+      return { v: fm ? `${colKo(m[1])} 값이 ${tko(fm[3].toUpperCase())} 전체의 ${({ AVG: '평균', SUM: '합계', MIN: '최솟값', MAX: '최댓값', COUNT: '건수' })[fm[1].toUpperCase()]}(${colKo(fm[2])})${OP_TAIL[m[2]]} 행만` : `${colKo(m[1])} 값이 서브쿼리 결과${OP_TAIL[m[2]]} 행만`, why: '기준값(평균 등)을 SQL 안에서 직접 계산하려고 서브쿼리를 씁니다.' };
+    }
+    if ((m = p.match(new RegExp('^' + ID + '\\s+IN\\s+@([\\w-]+)$', 'i')))) {
+      const v = env.bindings[m[2].toUpperCase()];
+      return { v: `${colKo(m[1])} 값이 선택 범위 @${m[2]} 안에 있는 행만${v !== undefined ? ' (이 문제의 가상 범위: ' + showVal(v) + ')' : ''}`, why: '화면에서 사용자가 고른 범위만 읽기 위해서입니다. 범위가 비어 있으면 제한 없이 전체가 조회됩니다.' };
+    }
+    if ((m = p.match(new RegExp('^' + ID + '\\s*(=|<>|<=|>=|<|>)\\s*@([\\w-]+)$', 'i')))) {
+      const name = m[3].toUpperCase(), bound = env.bindings[name], first = firstVal(tableOf(m[1]), fieldOf(m[1]));
+      let why = `프로그램 변수 @${m[3]}에 담긴 값을 기준으로 행을 고르기 위해서입니다.`;
+      if (m[2] === '=' && bound !== undefined && first !== undefined && String(first) !== String(bound)) why += ` 이 조건이 없으면 값과 상관없이 테이블의 첫 행(${colKo(m[1]).split('(')[0]} '${first}')이 읽혀 결과가 달라집니다.`;
+      return { v: `${colKo(m[1])} 값이 변수 ${ann('@' + m[3], env)}${OP_TAIL[m[2]]} 행만`, why };
+    }
+    if ((m = p.match(new RegExp('^' + ID + "\\s*(=|<>|<=|>=|<|>)\\s*('(?:[^']|'')*'|-?\\d+(?:\\.\\d+)?)$", 'i')))) {
+      const lit = m[3] === "' '" || m[3] === "''" ? '공백(초기값)' : m[3];
+      return { v: `${colKo(m[1])} 값이 ${lit}${OP_TAIL[m[2]]} 행만`, why: '원하는 행만 남기기 위한 고정 조건입니다.' };
+    }
+    if ((m = p.match(new RegExp('^' + ID + '\\s*(=|<>|<=|>=|<|>)\\s*' + ID + '$', 'i')))) return { v: `${colKo(m[1])} 값이 ${colKo(m[3])} 값${OP_TAIL[m[2]].replace(/^와/, '과')} 행만 (같은 행 안에서 두 열을 서로 비교)`, why: '두 항목이 모두 DB 열이라 ABAP 변수가 아닙니다. 그래서 @를 붙이지 않습니다.' };
+    if ((m = p.match(new RegExp('^' + ID + '\\s+BETWEEN\\s+(.+?)\\s+AND\\s+(.+)$', 'i')))) return { v: `${colKo(m[1])} 값이 ${ann(m[2], env)} 이상, ${ann(m[3], env)} 이하인 행만 (양 끝 포함)` };
+    if ((m = p.match(new RegExp('^' + ID + '\\s+(NOT\\s+)?LIKE\\s+(.+)$', 'i')))) return { v: `${colKo(m[1])} 값이 ${ann(m[3], env)} 패턴${m[2] ? '이 아닌' : '과 일치하는'} 행만 (%는 임의 문자열, _는 한 글자)` };
+    if ((m = p.match(new RegExp('^' + ID + '\\s+IS\\s+(NOT\\s+)?(NULL|INITIAL)$', 'i')))) {
+      const isNull = m[3].toUpperCase() === 'NULL';
+      const who = /~/.test(m[1]) ? `${tko(tableOf(m[1]))}의 ` : '';
+      return { v: isNull ? (m[2] ? `${who}${colKo(m[1])} 값이 NULL이 아닌 행만` : `${who}${colKo(m[1])} 값이 NULL인 행만 (LEFT OUTER JOIN에서 오른쪽 짝을 못 찾은 행)`) : `${colKo(m[1])} 값이 ${m[2] ? '비어 있지 않은' : '비어 있는(초기값)'} 행만` };
+    }
+    if ((m = p.match(new RegExp('^' + ID + '\\s+(NOT\\s+)?IN\\s*\\((.+)\\)$', 'i')))) return { v: `${colKo(m[1])} 값이 ${m[3].trim()} 중 하나${m[2] ? '가 아닌' : '인'} 행만` };
+    if ((m = p.match(/^(COUNT|SUM|AVG|MIN|MAX)\s*\(\s*(\*|[\w~]+)\s*\)\s*(=|<>|<=|>=|<|>)\s*(@[\w-]+|-?\d+)$/i))) {
+      const fn = m[1].toUpperCase();
+      return { v: `그룹의 ${fn === 'COUNT' ? '건수' : fn + ' 값'}가 ${ann(m[4], env)}${OP_TAIL[m[3]]} 그룹만`.replace('건수가', '건수가').replace('값가', '값이').replace(/^그룹의 건수가/, '그룹의 건수가'), why: '그룹으로 묶은 뒤의 집계 결과를 기준으로 거르므로 WHERE가 아니라 HAVING에 씁니다.' };
+    }
+    return { v: '조건: ' + p };
+  }
+
+  function describeItem(item, env) {
+    let m;
+    if (item === '*') return '모든 열';
+    if ((m = item.match(/^(COUNT|SUM|AVG|MIN|MAX)\s*\(\s*(DISTINCT\s+)?(.+?)\s*\)(?:\s+AS\s+(\w+))?$/i))) {
+      const fn = m[1].toUpperCase(), tgt = m[3] === '*' ? '전체 행' : colKo(m[3]);
+      return `${({ COUNT: '건수', SUM: '합계', AVG: '평균', MIN: '최솟값', MAX: '최댓값' })[fn]}(${tgt}${m[2] ? ', 중복 제외' : ''})${m[4] ? ' → 열 이름 ' + m[4] : ''}`;
+    }
+    if ((m = item.match(/^CASE\s+WHEN\s+(.+?)\s+THEN\s+(.+?)\s+ELSE\s+(.+?)\s+END(?:\s+AS\s+(\w+))?$/i))) {
+      const c = noTail(describePred(m[1], env).v), say = x => (/^'.*'$/.test(x.trim()) ? x.trim() : x.trim());
+      return `계산 열${m[4] ? ' ' + m[4] : ''}: ${ifText(c)} ${say(m[2])}, 아니면 ${say(m[3])}`;
+    }
+    if (/^CASE\b/i.test(item)) { const a = item.match(/\bEND(?:\s+AS\s+(\w+))?$/i); return `조건에 따라 값을 고르는 계산 열${a && a[1] ? ' ' + a[1] : ''}`; }
+    if ((m = item.match(/^(.+?)\s+AS\s+(\w+)$/i))) return /[+\-*/]/.test(m[1]) ? `계산식 ${m[1]} → 열 이름 ${m[2]}` : `${colKo(m[1])} → 열 이름 ${m[2]}`;
+    return colKo(item);
+  }
+
+  function describeInto(body, single, aggOnly) {
+    const b = flatSql(body);
+    const inline = b.match(/@DATA\(\s*(\w+)\s*\)/i), plain = b.match(/@(\w+)\s*$/);
+    if (/^CORRESPONDING FIELDS OF TABLE/i.test(b)) return { v: `내부 테이블 @${(plain || [, '?'])[1]}에 받기 — 열 이름이 같은 필드끼리 맞춰 채움`, why: '내부 테이블은 프로그램에 이미 선언돼 있어야 합니다.' };
+    if (/^APPENDING/i.test(b)) return { v: `내부 테이블 @${(plain || [, '?'])[1]}의 기존 내용 뒤에 이어 붙이기` };
+    if (/^TABLE/i.test(b)) return inline ? { v: `내부 테이블 ${inline[1]}에 받기 — @DATA(${inline[1]})로 즉석 선언`, why: '미리 DATA 선언을 하지 않아도 SELECT 결과 구조에 맞는 테이블이 만들어집니다.' } : { v: `내부 테이블 @${(plain || [, '?'])[1]}에 받기`, why: '여러 행을 한 번에 담는 곳이라 INTO TABLE을 씁니다.' };
+    if (inline) return { v: `${single ? '한 건' : aggOnly ? '집계 결과 한 줄' : '한 행'}을 구조/변수 ${inline[1]}에 받기 — @DATA(${inline[1]})로 즉석 선언`, why: single ? 'SELECT SINGLE은 결과가 한 건이라 내부 테이블(TABLE)이 아니라 구조에 바로 받습니다.' : '' };
+    return { v: `변수 @${(plain || [, '?'])[1]}에 받기` };
+  }
+
+  function describeSql(sql, env) {
+    let flat = flatSql(sql);
+    const ff = flat.match(/^SELECT\s+(SINGLE\s+|DISTINCT\s+)?FROM\s+(\w+(?:\s+AS\s+\w+)?)\s+FIELDS\s+(.*?)(?=\s+(?:WHERE|GROUP|HAVING|ORDER|INTO|UP)\b|$)(.*)$/i);
+    if (ff) flat = `SELECT ${ff[1] || ''}${ff[3]} FROM ${ff[2]}${ff[4]}`;
+    const list = [], notes = [];
+    const head = flat.match(/^SELECT\s+(SINGLE\s+|DISTINCT\s+)?(.*?)\s+FROM\s+(\w+)(?:\s+AS\s+(\w+))?/i);
+    if (!head) return null;
+    const mod = (head[1] || '').trim().toUpperCase(), single = mod === 'SINGLE';
+    env.alias = { [(head[4] || head[3]).toUpperCase()]: head[3].toUpperCase() }; env.table = head[3].toUpperCase();
+    const joinRe = /\b(INNER|LEFT\s+OUTER|LEFT)?\s*JOIN\s+(\w+)(?:\s+AS\s+(\w+))?\s+ON\s+(.*?)(?=\bINNER\b|\bLEFT\b|\bJOIN\b|\bWHERE\b|\bGROUP\b|\bORDER\b|\bINTO\b|\bHAVING\b|\bUP\b|$)/gi;
+    const joins = []; let jm;
+    while ((jm = joinRe.exec(flat))) { env.alias[(jm[3] || jm[2]).toUpperCase()] = jm[2].toUpperCase(); joins.push({ type: /LEFT/i.test(jm[1] || '') ? 'LEFT OUTER JOIN' : 'INNER JOIN', table: jm[2].toUpperCase(), on: jm[4].trim() }); }
+    let target = `${tko(head[3].toUpperCase())} 테이블${single ? '에서 한 건만 읽기 (SELECT SINGLE)' : mod === 'DISTINCT' ? '에서 중복 없이 읽기 (DISTINCT)' : '에서 읽기'}`;
+    if (joins.length) target += '. ' + joins.map(j => {
+      const keys = [...new Set([...j.on.matchAll(/\w+~(\w+)\s*=\s*\w+~(\w+)/g)].map(x => x[1].toUpperCase()))];
+      return `${tko(j.table)}를 ${j.type === 'INNER JOIN' ? '짝이 있는 행끼리만(INNER JOIN)' : '왼쪽 행을 모두 남기고(LEFT OUTER JOIN)'} ${keys.length ? '키 열(' + keys.join(', ') + ')이 같은 행끼리' : '조건이 맞는 행끼리'} 연결`;
+    }).join(', ');
+    list.push({ k: '조회 대상', v: target });
+    const items = splitComma(head[2]);
+    list.push({ k: '가져올 열', v: items.map(i => describeItem(i, env)).join(' / ') });
+    const bodies = {}; CLAUSES.forEach(([name, re]) => { const m = flat.match(re); if (m && m[2].trim()) bodies[name] = m[2].trim(); });
+    const aggOnly = items.some(i => /^(COUNT|SUM|AVG|MIN|MAX)\s*\(/i.test(i)) && !bodies['GROUP BY'];
+    if (bodies.WHERE) {
+      const parts = splitTop(bodies.WHERE, 'AND');
+      parts.forEach(pt => { const d = describePred(pt, env); list.push({ k: '조건', v: d.v, why: d.why }); });
+      if (single && parts.length) { const last = list[list.length - 1]; last.why = (last.why ? last.why + ' ' : '') + 'SELECT SINGLE은 “키로 딱 한 행”을 읽는 문장이라, 어느 행인지 정하는 조건이 꼭 필요합니다.'; }
+    }
+    if (bodies['GROUP BY']) list.push({ k: '묶기', v: `${splitComma(bodies['GROUP BY']).map(colKo).join(', ')} 값이 같은 행을 한 줄로 묶어 집계`, why: '묶지 않은 열은 집계 함수 없이 SELECT 목록에 쓸 수 없고, 쓰려면 모두 GROUP BY에 있어야 합니다.' });
+    if (bodies.HAVING) splitTop(bodies.HAVING, 'AND').forEach(pt => { const d = describePred(pt, env); list.push({ k: '그룹 조건', v: d.v, why: d.why }); });
+    if (bodies['ORDER BY']) { const ob = bodies['ORDER BY']; list.push({ k: '정렬', v: /^PRIMARY KEY$/i.test(ob) ? '테이블의 기본 키 순서로 정렬' : splitComma(ob).map(x => { const mm = x.match(/^(.+?)(?:\s+(ASCENDING|ASC|DESCENDING|DESC))?$/i); return `${colKo(mm[1])} ${/^DESC/i.test(mm[2] || '') ? '내림차순(큰 값부터)' : '오름차순(작은 값부터)'}`; }).join(', ') + ' 정렬' }); }
+    const up = flat.match(/\bUP\s+TO\s+(\d+)\s+ROWS\b/i); if (up) list.push({ k: '건수 제한', v: `앞에서 ${up[1]}건까지만 읽기` });
+    if (bodies.INTO) { const d = describeInto(bodies.INTO, single, aggOnly); list.push({ k: '결과 받기', v: d.v, why: d.why }); }
+    const pre = flat.replace(/\bINTO\b[\s\S]*?(?=\bUP\s+TO\b|$)/i, ' ');
+    [...new Set((pre.match(/@([A-Za-z_][\w-]*)/g) || []).map(x => x.slice(1)).filter(x => !/^DATA\b/i.test(x)))].forEach(n => {
+      const bound = env.bindings[n.toUpperCase()], decl = declOf(env.c.project.source, n.replace(/-.*/, ''));
+      const kind = decl ? '프로젝트 코드: ' + decl : /^P_/i.test(n) ? '보통 선택 화면에서 사용자가 입력하는 값(PARAMETERS)' : /^S_/i.test(n) ? '보통 선택 화면에서 사용자가 고르는 범위(SELECT-OPTIONS)' : 'ABAP 프로그램의 변수';
+      notes.push(`@${n} — ${kind}${bound !== undefined ? ` · 가상 실행에서는 ${showVal(bound)}로 가정` : ''}`);
+    });
+    return { list, notes };
+  }
+  const declOf = (source, name) => {
+    const m = String(source || '').match(new RegExp('^\\s*(?:PARAMETERS|SELECT-OPTIONS|DATA|CONSTANTS|STATICS)\\b[^\\n]*\\b' + rxEsc(name) + '\\b[^\\n]*$', 'im'));
+    return m ? m[0].trim().replace(/\s+/g, ' ') : '';
+  };
+  function sourcePurposes(source) {
+    const raw = String(source || '').split(/\r?\n/), stripped = strip(source), out = [], re = /\bSELECT\b(?!-)[\s\S]*?\./gi; let m;
+    while ((m = re.exec(stripped))) {
+      const parts = [];
+      for (let i = stripped.slice(0, m.index).split('\n').length - 2; i >= 0; i--) {
+        const t = (raw[i] || '').trim();
+        if (!t) { if (parts.length) break; continue; }
+        if (/^["*]/.test(t)) { parts.unshift(t.replace(/^["*]+\s*/, '')); continue; }
+        break;
+      }
+      out.push(parts.join(' ').trim());
+    }
+    return out;
+  }
+  /* 프로젝트 코드의 @변수에 가상 값을 정해 줌: 첫 행과 겹치지 않게 골라 WHERE를 빼면 결과가 달라지도록 함 */
+  function bindSource(sql, c) {
+    const flat = flatSql(sql), alias = {}, bindings = {};
+    const fm = flat.match(/\bFROM\s+(\w+)(?:\s+AS\s+(\w+))?/i); if (fm) alias[(fm[2] || fm[1]).toUpperCase()] = fm[1].toUpperCase();
+    const jr = /\bJOIN\s+(\w+)(?:\s+AS\s+(\w+))?/gi; let jm; while ((jm = jr.exec(flat))) alias[(jm[2] || jm[1]).toUpperCase()] = jm[1].toUpperCase();
+    const base = fm ? fm[1].toUpperCase() : c.table, re = /(?:(\w+)~)?([A-Z][A-Z0-9_]*)\s*(=|<>|<=|>=|<|>|IN)\s*@([A-Za-z_][\w-]*)/gi; let m;
+    while ((m = re.exec(flat))) {
+      const t = m[1] ? (alias[m[1].toUpperCase()] || base) : base, f = m[2].toUpperCase(), name = m[4].toUpperCase();
+      if (name in bindings) continue;
+      const vals = colVals(t, f); if (!vals.length) continue;
+      const v = kindOf(t, f) === 'num' ? quant(t, f, 0.5) : vals[Math.min(vals.length - 1, 1 + c.r.int(Math.max(1, vals.length - 1)))];
+      bindings[name] = m[3].toUpperCase() === 'IN' || /^S_/i.test(name) ? [v] : v;
+    }
+    return bindings;
+  }
+
   function sourceProblem(c, mode, index, variant) {
     const raw = sourceQueries(c.project.source)[index];
     if (!raw) return build(c.project, c.seed, 'projection');
@@ -566,18 +798,21 @@
     const table = (sql.match(/\bFROM\s+([A-Z][A-Z0-9_]*)/i) || [])[1] || c.table;
     const list = (sql.match(/^\s*SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?([\s\S]*?)\s+FROM\b/i) || [, '*'])[1];
     const cols = list.split(',').map(x => x.trim()).filter(Boolean);
-    const answer = sql + '.', checks = [K.sel, ...pieces.map(p => K.has(p, p))];
+    const purpose = sourcePurposes(c.project.source)[index] || '', bindings = bindSource(sql, c);
+    const answer = sql + '.', checks = [K.sel, ...pieces.map(p => /^INTO\s/i.test(p) ? K.has(p, p, p.replace(/@DATA\(\s*(\w+)\s*\)/i, '@$1')) : K.has(p, p))];
     let d, spec;
     if (mode === 'blank') {
       const hide = hideable(sql); const name = c.r.pick(hide.length ? hide : ['WHERE']);
       const re = CLAUSES.find(x => x[0] === name)[1];
       const blanked = sql.replace(re, (m, a, b) => a + '____' + (b.match(/\s*$/) || [''])[0]) + '.';
       d = { topic, level, kind: '빈칸 채우기' };
-      spec = { name: `프로젝트 코드 빈칸 채우기 ${index + 1} (${name})`, table, cols, snippet: blanked, req: `프로젝트 코드의 SELECT 중 ${name} 부분이 빈칸(____)입니다. 코드를 보고 빈칸을 복원해 SELECT 전체를 작성하세요.`, answer, checks, h1: '프로젝트 코드의 변수명과 조건을 떠올려 보세요. 빈칸은 ' + name + ' 절입니다.' };
+      const ROLE = { 'WHERE': '어떤 행을 읽을지 정하는 조건 (변수·선택 범위와 열을 연결)', 'GROUP BY': '같은 값끼리 묶어 집계할 기준 열', 'HAVING': '묶은 뒤 집계 결과로 그룹을 거르는 조건', 'ORDER BY': '결과를 어떤 열 기준으로 정렬할지', 'INTO': '조회 결과를 받을 곳(내부 테이블 또는 구조/변수)과 그 형태' };
+      spec = { name: `프로젝트 코드 빈칸 채우기 ${index + 1} (${name})`, table, cols, snippet: blanked, bindings, brief: false,
+        reqList: [...(purpose ? [{ k: '목적', v: purpose }] : []), { k: '빈칸', v: `${name} 절 — ${ROLE[name] || '이 절의 내용'}`, why: '위 코드의 나머지 절(SELECT 열, FROM, 다른 조건)과 목적을 단서로 추론해 보세요.' }, { k: '제출 방법', v: '빈칸만이 아니라 SELECT 문 전체를 다시 작성해서 제출합니다.' }], req: (purpose ? `이 SELECT의 목적: “${esc(purpose)}”. ` : '') + `${name} 부분이 빈칸(____)입니다. 목적과 나머지 절을 단서로 빈칸을 복원해 SELECT 전체를 작성하세요.`, answer, checks, h1: '프로젝트 코드의 변수명과 조건을 떠올려 보세요. 빈칸은 ' + name + ' 절입니다.' };
     } else {
       const ty = /\bSINGLE\b/i.test(sql) ? 'SELECT SINGLE 연습' : /\bJOIN\b/i.test(sql) ? '프로젝트 JOIN 연습' : /\bGROUP\s+BY\b/i.test(sql) ? '프로젝트 그룹 집계 연습' : /\bORDER\s+BY\b/i.test(sql) ? '정렬과 행 수 제한 연습' : '프로젝트 조회 패턴 연습';
       d = { topic, level, kind: '프로젝트 코드' };
-      spec = { name: ty + ' ' + (index + 1), table, cols, req: `프로젝트 코드의 조회 패턴 ${index + 1}을 Open SQL SELECT 구문으로 다시 작성하세요. 이 문제는 ${ty.replace(' 연습', '')}을 포함합니다.`, answer, checks, h1: '프로젝트 전체 코드에서 이 SELECT 패턴의 목적을 먼저 확인하세요.', h2: 'SELECT, FROM, WHERE·JOIN·GROUP BY 등의 절을 코드의 순서대로 작성하세요.' };
+      spec = { name: ty + ' ' + (index + 1) + (purpose ? ' · ' + purpose : ''), table, cols, bindings, purpose, req: (purpose ? `“${esc(purpose)}” — ` : `프로젝트 코드의 조회 패턴 ${index + 1}: `) + '아래 “이 문제에서 해야 할 일”을 모두 만족하는 SELECT 문 한 개를 작성하세요.', answer, checks, h1: '프로젝트 전체 코드에서 이 SELECT 패턴의 목적을 먼저 확인하세요.', h2: 'SELECT, FROM, WHERE·JOIN·GROUP BY 등의 절을 코드의 순서대로 작성하세요.' };
     }
     return finalize(c, spec, d, variant);
   }

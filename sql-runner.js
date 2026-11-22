@@ -181,7 +181,7 @@
         };
       }
       if (this.eatId('IN')) {
-        if (this.peek() && this.peek().t === 'id' && this.peek().v[0] === '@') {
+        if (this.peek() && this.peek().t === 'id' && (this.peek().v[0] === '@' || !this.isOp('('))) {
           const nm = this.peek().v; this.i++;
           return s => { let r = hostValue(nm, s.env); if (!Array.isArray(r)) r = [r]; const v = left(s); const ok = r.length === 0 || r.some(x => eq(v, x)); return neg ? !ok : ok; };
         }
@@ -306,6 +306,21 @@
     return out.filter(x => x.length);
   }
 
+  /* 클래식(옛 문법) 목록은 쉼표 없이 공백으로 나열한다: SELECT a b COUNT( * ) AS n / ORDER BY a ASCENDING b DESCENDING */
+  function splitSeq(tokens, withDir) {
+    const parts = [], p = new P(tokens);
+    while (!p.end()) {
+      const st = p.i;
+      if (p.isOp('*')) p.i++; else p.add();
+      if (withDir) { const t = p.peek(); if (t && t.t === 'id' && /^(ASCENDING|ASC|DESCENDING|DESC)$/.test(t.v)) p.i++; }
+      else if (p.isId('AS')) p.i += 2;
+      p.eatOp(',');
+      parts.push(tokens.slice(st, p.i));
+    }
+    return parts.map(pt => (pt.length && pt[pt.length - 1].t === 'op' && pt[pt.length - 1].v === ',' ? pt.slice(0, -1) : pt));
+  }
+  const listParts = (tokens, withDir) => { const c = splitTop(tokens); return c.length > 1 ? c : splitSeq(tokens, withDir); };
+
   function parseSelect(tokens) {
     if (!tokens.length || !tokens[0] || tokens[0].v !== 'SELECT') throw Error('SELECT 문을 찾지 못했습니다.');
     const segs = []; let d = 0;
@@ -354,8 +369,7 @@
 
     const sel = new P([]); let aggUsed = false;
     const items = [];
-    const noComma = listToks.length > 1 && !listToks.some(k => k.t === 'op') && listToks.every(k => k.t === 'id');
-    const parts = noComma ? listToks.map(k => [k]) : splitTop(listToks);
+    const parts = listParts(listToks, false);
     parts.forEach((pt, n) => {
       if (pt.length === 1 && pt[0].t === 'op' && pt[0].v === '*') { items.push({ star: '' }); return; }
       if (pt.length === 1 && pt[0].t === 'id' && /~\*$/.test(pt[0].v)) { items.push({ star: pt[0].v.slice(0, -2) }); return; }
@@ -376,14 +390,14 @@
     if (whereP && whereP.agg) throw Error('WHERE에는 집계 함수를 쓸 수 없습니다. 그룹 조건은 HAVING을 사용하세요.');
     const gp = get('GROUP') ? new P(get('GROUP').slice(1)) : null;
     const group = [];
-    if (gp) do { group.push(gp.add()); } while (gp.eatOp(','));
+    if (gp) while (!gp.end()) { group.push(gp.add()); gp.eatOp(','); }
     const hp = get('HAVING') ? new P(get('HAVING')) : null;
     const having = hp ? hp.or() : null;
     const order = [];
     if (get('ORDER')) {
       const ot = get('ORDER').slice(1);
       if (ot.length === 2 && ot[0].v === 'PRIMARY' && ot[1].v === 'KEY') order.push({ pk: true });
-      else splitTop(ot).forEach(pt => {
+      else listParts(ot, true).forEach(pt => {
         let desc = false, body = pt; const last = pt[pt.length - 1];
         if (last && last.t === 'id' && /^(ASCENDING|ASC|DESCENDING|DESC)$/.test(last.v)) { desc = /^DESC/.test(last.v); body = pt.slice(0, -1); }
         const p = new P(body); const f = p.add(); if (!p.end()) throw Error('ORDER BY 항목을 해석하지 못했습니다.');

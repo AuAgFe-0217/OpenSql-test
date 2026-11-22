@@ -16,3 +16,12 @@
 .var-notes{margin-top:12px;padding-top:11px;border-top:1px dashed #d5dcef;font-size:11px;color:#5d6c82;line-height:1.7}
 .var-notes>b{display:block;font-size:10px;color:#4d5f7d;margin-bottom:3px}
 .var-notes div{font-family:'DM Mono',monospace;font-size:10.5px}
+
+.top-right{display:flex;align-items:center;gap:10px}
+.syntax-toggle{display:inline-flex;border:1px solid #d5dcef;border-radius:9px;overflow:hidden;background:#fff}
+.syntax-toggle button{border:0;background:transparent;padding:8px 13px;font:600 12px inherit;font-family:inherit;color:#5d6c82;cursor:pointer}
+.syntax-toggle button+button{border-left:1px solid #d5dcef}
+.syntax-toggle button.active{background:#3155d4;color:#fff}
+.syntax-toggle button:not(.active):hover{background:#f1f4fc}
+.tag.syntax-classic{background:#fff4dc;color:#8a5a00}
+.tag.syntax-new{background:#e4efff;color:#1d4fb8}

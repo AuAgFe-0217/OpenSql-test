@@ -49,7 +49,11 @@
     return line;
   }).join('\n');
   const TOK = /'(?:[^']|'')*'|`[^`]*`|<[A-Z_][A-Z0-9_]*>|<>|<=|>=|!=|@?[A-Z_][A-Z0-9_]*(?:~[A-Z_*][A-Z0-9_]*)?(?:-[A-Z_][A-Z0-9_]*)*|\d+(?:\.\d+)?|\S/g;
-  const canon = src => (strip(src).toUpperCase().match(TOK) || []).join(' ');
+  const canonStrict = src => (strip(src).toUpperCase().match(TOK) || []).join(' ');
+  /* 문법 중립 정규화: '@'와 쉼표를 지워 새 문법/클래식 코드를 같은 모양으로 비교한다.
+     (새 문법 vs 클래식 형식 준수 여부는 아래 '문법 모드' 검사가 따로 판정) */
+  const canon = src => (strip(src).toUpperCase().match(TOK) || []).filter(t => t !== ',').map(t => (t.length > 1 && t[0] === '@' ? t.slice(1) : t)).join(' ');
+  const nz = re => new RegExp(re.source.replace(/@/g, '').replace(/ , /g, ' '), re.flags);
 
   /* 체크 헬퍼: [라벨, 함수(정규화된 코드)] */
   const K = {
@@ -57,13 +61,15 @@
     from: t => [t + ' 테이블에서 조회', c => new RegExp('\\bFROM ' + t + '\\b').test(c)],
     cols: (list, label) => [label || list.join(', ') + ' 열 포함', c => list.every(f => new RegExp('(^|[^A-Z0-9_])' + rxEsc(f) + '(?![A-Z0-9_])').test(c))],
     has: (label, ...alts) => [label, c => alts.some(a => c.includes(canon(a)))],
-    re: (label, re) => [label, c => re.test(c)],
-    no: (label, re) => [label, c => !re.test(c)],
-    intoTable: rv => ['결과를 @' + rv + ' 내부 테이블에 저장', c => new RegExp('\\bINTO (?:CORRESPONDING FIELDS OF )?TABLE @' + rv + '(?![A-Z0-9_])').test(c)],
-    intoVar: v => ['결과를 @' + v + ' 변수에 저장', c => new RegExp('\\bINTO @' + v + '(?![A-Z0-9_])').test(c)],
+    re: (label, re) => { const r = nz(re); return [label, c => r.test(c)]; },
+    sre: (label, re) => [label, c => re.test(c), 'strict'],
+    no: (label, re) => { const r = nz(re); return [label, c => !r.test(c)]; },
+    sno: (label, re) => [label, c => !re.test(c), 'strict'],
+    intoTable: rv => ['결과를 @' + rv + ' 내부 테이블에 저장', c => new RegExp('\\bINTO (?:CORRESPONDING FIELDS OF )?TABLE ' + rv + '(?![A-Z0-9_])').test(c)],
+    intoVar: v => ['결과를 @' + v + ' 변수에 저장', c => new RegExp('\\bINTO ' + v + '(?![A-Z0-9_])').test(c)],
     upTo: n => ['UP TO ' + n + ' ROWS로 건수 제한', c => new RegExp('\\bUP TO ' + n + ' ROWS\\b').test(c)],
     orderBy: (items, label) => ['ORDER BY ' + items.map(([f, d]) => f + (d ? ' DESCENDING' : '')).join(', ') + (label || ''),
-      c => new RegExp('\\bORDER BY ' + items.map(([f, d]) => '(?:\\w+~)?' + f + '(?![A-Z0-9_~])' + (d ? ' (?:DESCENDING|DESC)' : '(?: ASCENDING| ASC)?(?! DESC)')).join(' , ')).test(c)],
+      c => new RegExp('\\bORDER BY ' + items.map(([f, d]) => '(?:\\w+~)?' + f + '(?![A-Z0-9_~])' + (d ? ' (?:DESCENDING|DESC)' : '(?: ASCENDING| ASC)?(?! DESC)')).join(' ')).test(c)],
     fn: (name, arg, label) => [label || name + '( ' + arg + ' ) 집계', c => new RegExp('\\b' + name + ' \\( (?:DISTINCT )?(?:\\w+~)?' + rxEsc(arg) + ' \\)').test(c)]
   };
 
@@ -95,7 +101,7 @@
     o.upTo && '  UP TO ' + o.upTo + ' ROWS'
   ].filter(Boolean).join('\n') + '.';
 
-  function ctxOf(project, seed) {
+  function ctxOf(project, seed, syntax) {
     const table = String(project.primaryTable || (project.tables || [])[0] || 'SFLIGHT').toUpperCase();
     const info = SCHEMA[table] || null;
     // A project's SELECT list can include AS aliases (for example SMOKER_CNT).
@@ -107,7 +113,7 @@
     const offset = parseInt(String(seed).slice(0, 2), 16) % fields.length;
     const pick = (start, count = 1) => Array.from({ length: Math.min(count, fields.length) }, (_, i) => fields[(start + i) % fields.length]);
     const kindFields = k => { const own = fields.filter(f => kindOf(table, f) === k); return own.length ? own : (info ? Object.keys(info.f).filter(f => info.f[f] === k) : []); };
-    const c = { project, seed, r, table, info, fields, offset, pick, kindFields, rv: String(project.resultVar || 'GT_DATA').toUpperCase(), focused: pick(offset, Math.min(2, fields.length)), keyField: fields[offset], where: getWhere(project.source), cvars: project.conditionVars || [] };
+    const c = { project, seed, syntax: syntax === 'classic' ? 'classic' : 'new', r, table, info, fields, offset, pick, kindFields, rv: String(project.resultVar || 'GT_DATA').toUpperCase(), focused: pick(offset, Math.min(2, fields.length)), keyField: fields[offset], where: getWhere(project.source), cvars: project.conditionVars || [] };
     c.num = kindFields('num')[0];
     const gcand = info ? uniq([...fields.filter(f => info.group.includes(f)), ...info.group]) : [];
     c.gf = gcand.length ? gcand[offset % gcand.length] : c.keyField;
@@ -119,7 +125,85 @@
   const REG = {}; const ORDER = [];
   const def = (id, topic, level, kind, ok, make) => { REG[id] = { id, topic, level, kind, ok: ok || (() => true), make }; ORDER.push(id); };
 
+
+  /* ================= 문법 모드: 새 문법(7.40+) / 클래식(옛 문법) =================
+   * 문제는 새 문법 정답으로 만들고, 클래식 모드에서는 정답·설명을 변환해 보여준다.
+   * 채점은 문법 중립 비교 + '이 모드의 문법 형식을 지켰는가' 검사로 나눈다.
+   */
+  const NEW_ONLY = new Set(['inline_table', 'case_expr', 'arith_expr', 'from_first', 'old_to_new', 'fix_missing_at', 'fix_comma', 'fix_col_at', 'topn_group']);
+  const NEW_ONLY_SQL = /\bCASE\b|\bFIELDS\b|\bCOALESCE\b|\bCAST\b/i;
+  const stripLit = src => strip(src).replace(/'(?:[^']|'')*'|`[^`]*`/g, "''");
+  const hasAt = src => /@/.test(stripLit(src));
+  const topComma = text => { let d = 0; for (const ch of text) { if (ch === '(') d++; else if (ch === ')') d--; else if (ch === ',' && d === 0) return true; } return false; };
+  function listSpans(src) {
+    const t = stripLit(src).replace(/\s+/g, ' ').toUpperCase(), m = t.match(/\bSELECT\b(?!-)/);
+    if (!m) return [];
+    const q = t.slice(m.index), out = [];
+    const ff = q.match(/^SELECT (?:SINGLE |DISTINCT )?FROM \S+(?: AS \S+)? FIELDS (.*?)(?= (?:WHERE|GROUP BY|HAVING|ORDER BY|INTO|UP TO)\b|\.|$)/);
+    const sl = ff ? ff[1] : (q.match(/^SELECT (?:SINGLE |DISTINCT )?(.*?) FROM /) || [])[1];
+    if (sl) out.push(sl);
+    const gb = q.match(/\bGROUP BY (.*?)(?= (?:HAVING|ORDER BY|INTO|UP TO)\b|\.|$)/); if (gb) out.push(gb[1]);
+    const ob = q.match(/\bORDER BY (.*?)(?= (?:INTO|UP TO)\b|\.|$)/); if (ob) out.push(ob[1]);
+    return out;
+  }
+  const hasListComma = src => listSpans(src).some(topComma);
+
+  /* 한 문장(statement)의 SELECT 목록·GROUP BY·ORDER BY 목록에서 최상위 쉼표를 제거 */
+  function declist(stmt) {
+    const mk = []; let d = 0, q = '';
+    for (let i = 0; i < stmt.length; i++) {
+      const ch = stmt[i];
+      if (q) { mk.push('_'); if (ch === q) q = ''; continue; }
+      if (ch === "'" || ch === '`') { q = ch; mk.push('_'); continue; }
+      if (ch === '(') { d++; mk.push('_'); continue; }
+      if (ch === ')') { d--; mk.push('_'); continue; }
+      mk.push(d > 0 ? '_' : ch);
+    }
+    const mask = mk.join(''), spans = [], chars = stmt.split('');
+    const a = mask.match(/^\s*SELECT\s+(?:SINGLE\s+|DISTINCT\s+)?/i);
+    if (!a) return stmt;
+    const f = mask.slice(a[0].length).search(/\sFROM\s/i);
+    if (f >= 0) spans.push([a[0].length, a[0].length + f]);
+    [/\bGROUP\s+BY\s+/i, /\bORDER\s+BY\s+/i].forEach(re => {
+      const m = re.exec(mask); if (!m) return;
+      const st = m.index + m[0].length, e = mask.slice(st).search(/\s(?:HAVING|ORDER\s+BY|INTO|APPENDING|UP\s+TO|FOR\s+ALL|WHERE)\b/i);
+      spans.push([st, e < 0 ? stmt.length : st + e]);
+    });
+    spans.forEach(([s0, e0]) => {
+      for (let i = s0; i < e0; i++) if (mask[i] === ',') { chars[i] = ' '; let j = i + 1; while (j < e0 && /\s/.test(stmt[j])) { chars[j] = ''; j++; } i = j - 1; }
+    });
+    return chars.join('');
+  }
+  function toClassic(text) {
+    let s = String(text == null ? '' : text).replace(/@?DATA\(\s*(\w+)\s*\)/gi, '$1');
+    s = s.replace(/('(?:[^']|'')*'|`[^`]*`)|@(?=[A-Za-z_])/g, (m, lit) => lit || '');
+    return s.split(/(\.[ \t]*(?:\n|$))/).map(part => (/^\.[ \t]*(?:\n|$)/.test(part) ? part : declist(part))).join('');
+  }
+  /* 설명 문장용: @ 표기를 지우고, @ 문법 자체를 설명하는 문장(쉼표·@ 규칙)은 클래식에서 뺀다 */
+  function classicText(str) {
+    if (str == null) return str;
+    let t = String(str).replace(/@DATA\(구조\)\s*또는\s*@?변수/g, '구조/변수').replace(/@?DATA\(\s*(\w+)\s*\)/gi, '$1');
+    const parts = t.split(/(\.\s+)/); let out = '';
+    for (let i = 0; i < parts.length; i += 2) {
+      const sent = parts[i], delim = parts[i + 1] || '';
+      if (/@(?![A-Za-z_])/.test(sent) || /쉼표/.test(sent)) continue;
+      out += sent.replace(/@(?=[A-Za-z_])/g, '') + delim;
+    }
+    return out.trim();
+  }
+  function classicSpec(spec, newAnswer) {
+    const out = { ...spec };
+    out.answer = toClassic(spec.answer);
+    if (spec.snippet) out.snippet = toClassic(spec.snippet);
+    ['req', 'h1', 'h2', 'note', 'name'].forEach(k => { if (typeof spec[k] === 'string') out[k] = classicText(spec[k]); });
+    if (/@DATA\s*\(/i.test(newAnswer || '') || /@DATA\s*\(/i.test(spec.snippet || '')) out.req = (out.req || '') + ' (결과를 받는 변수·구조는 프로그램에 미리 선언돼 있다고 가정합니다.)';
+    out.checks = spec.checks.map(ch => { let l = classicText(ch[0]); if (/^(SELECT|GROUP BY|ORDER BY)\b/i.test(l)) l = l.replace(/,\s*/g, ' '); return [l, ...ch.slice(1)]; }).filter(ch => ch[0]);
+    return out;
+  }
+
   function finalize(c, spec, d, variant) {
+    const syntax = c.syntax === 'classic' ? 'classic' : 'new', newAnswer = spec.answer;
+    if (syntax === 'classic') spec = classicSpec(spec, newAnswer);
     const bindings = spec.bindings || {};
     const run = code => window.openSqlRunner ? window.openSqlRunner.run(code, { data: DB(), project: c.project, bindings }) : { ok: false };
     const checks = spec.checks.slice();
@@ -132,12 +216,20 @@
       ref = run(spec.answer);
       if (ref.ok) checks.push(['가상 실행 결과가 기대 결과와 일치', code => { const g = run(code); return g.ok && sameRows(ref.rows, g.rows, !!spec.ordered); }, true]);
     }
+    if (/\bSELECT\b(?!-)/i.test(newAnswer || '')) {
+      if (syntax === 'classic') checks.push(['클래식 문법 형식 — 열·정렬 목록은 공백으로 구분, @ 없이 ABAP 변수 사용', code => !hasAt(code) && !hasListComma(code), true]);
+      else {
+        const needAt = hasAt(newAnswer), needComma = hasListComma(newAnswer);
+        if (needAt || needComma) checks.push(['새 문법 형식 — ' + [needComma ? '열·정렬 목록은 쉼표로 구분' : '', needAt ? 'ABAP 변수·INTO 대상은 @로 표시' : ''].filter(Boolean).join(', '), code => (!needAt || hasAt(code)) && (!needComma || hasListComma(code)), true]);
+      }
+    }
     let brief = null;
     try {
-      const stmts = strip(spec.answer || '').split(/\.\s*(?:\n|$)/).filter(x => /\bSELECT\b(?!-)/i.test(x));
-      const first = (strip(spec.answer || '').match(/\bSELECT\b(?!-)[\s\S]*?\.(?=\s*(?:\n|$))/i) || [])[0];
-      if (spec.brief !== false && spec.expects == null && stmts.length === 1 && first) brief = describeSql(first.replace(/\.\s*$/, ''), { c, bindings: Object.fromEntries(Object.entries(bindings).map(([k, v]) => [k.toUpperCase(), v])) });
+      const stmts = strip(newAnswer || '').split(/\.\s*(?:\n|$)/).filter(x => /\bSELECT\b(?!-)/i.test(x));
+      const first = (strip(newAnswer || '').match(/\bSELECT\b(?!-)[\s\S]*?\.(?=\s*(?:\n|$))/i) || [])[0];
+      if (spec.brief !== false && spec.expects == null && stmts.length === 1 && first) brief = describeSql(first.replace(/\.\s*$/, ''), { c, classic: syntax === 'classic', bindings: Object.fromEntries(Object.entries(bindings).map(([k, v]) => [k.toUpperCase(), v])) });
     } catch (e) { brief = null; }
+    const fixRL = rl => (syntax === 'classic' && rl ? rl.map(x => ({ k: x.k, v: classicText(x.v), why: classicText(x.why || '') })) : rl);
     const flat = String(spec.answer || '').replace(/\s+/g, ' ');
     const answerFields = (spec.cols || []).join(', ') || '문제에서 요청한 열';
     const keyClause = String(spec.answer || '').split('\n').map(line => line.trim()).find(line => /^(?:WHERE|INNER JOIN|LEFT OUTER JOIN|GROUP BY|HAVING|ORDER BY|UP TO)\b/i.test(line)) || '추가 조건이 없다면 FROM 뒤에 INTO TABLE을 배치합니다.';
@@ -145,14 +237,14 @@
       topic: d.topic, level: spec.level || d.level, kind: d.kind, title: c.project.name + ' · ' + spec.name,
       table: spec.table || c.table, cols: spec.cols || [], schemaText: spec.schemaText || '',
       hints: [
-        `1단계: ${c.table}에서 ${answerFields}를 조회하는 SELECT 열 목록을 만드세요. 결과는 내부 테이블 @${c.rv}에 담습니다.`,
-        `2단계: 이번 문제의 핵심 절은 다음과 같습니다: ${keyClause} DB 열에는 @를 붙이지 않고 ABAP 호스트 변수에만 @를 붙이세요.${spec.h1 ? ' 참고: ' + spec.h1 : ''}${spec.h2 ? ' ' + spec.h2 : ''}`,
+        `1단계: ${c.table}에서 ${answerFields}를 조회하는 SELECT 열 목록을 만드세요. 결과는 내부 테이블 ${syntax === 'classic' ? '' : '@'}${c.rv}에 담습니다.`,
+        `2단계: 이번 문제의 핵심 절은 다음과 같습니다: ${keyClause} ※ ${syntax === 'classic' ? '열 목록은 공백으로 구분하고, ABAP 변수에는 @를 붙이지 않습니다.' : 'DB 열에는 @를 붙이지 않고 ABAP 호스트 변수에만 @를 붙이세요.'}${spec.h1 ? ' 참고: ' + spec.h1 : ''}${spec.h2 ? ' ' + spec.h2 : ''}`,
         spec.expects != null ? `3단계: 기대 값은 ${spec.expects}입니다. 조건을 조정해 가상 실행 결과와 맞춰 보세요.` : `3단계: 완성된 Open SQL SELECT 예시입니다.\n${flat}`
       ],
       answer: spec.expects != null ? spec.expects + '\n\n' + (spec.snippet || '') : spec.answer,
       criteria: checks.map(x => x[0]),
-      check: code => { const p = canon(code); return checks.map(([, fn, raw]) => { try { return !!fn(raw ? code : p); } catch (e) { return false; } }); },
-      reqList: spec.reqList || (brief ? brief.list : null), varNotes: spec.reqList ? (spec.varNotes || []) : (brief ? brief.notes : []),
+      check: code => { const p = canon(code), ps = canonStrict(code); return checks.map(([, fn, raw]) => { try { return !!fn(raw === 'strict' ? ps : raw ? code : p); } catch (e) { return false; } }); },
+      syntax, reqList: fixRL(spec.reqList || (brief ? brief.list : null)), varNotes: (spec.reqList ? (spec.varNotes || []) : (brief ? brief.notes : [])).map(n => (syntax === 'classic' ? classicText(n) : n)),
       plain: !!spec.plain, req: spec.req, snippet: spec.snippet || '', preview: spec.preview || null, note: spec.note || '', bindings, expects: spec.expects != null ? String(spec.expects) : null,
       run: () => (ref && ref.ok ? ref.rows : [{ 안내: '이 문제는 가상 실행 결과를 제공하지 않습니다.' }]),
       projectId: c.project.id, resultVar: c.rv, sourceContext: c.project.source || '', variant,
@@ -260,7 +352,7 @@
   const PAIRS = { SFLIGHT: [['SEATSOCC', 'SEATSMAX', '<', '좌석 여유가 있는'], ['SEATSOCC', 'SEATSMAX', '=', '만석인'], ['SEATSOCC_B', 'SEATSMAX_B', '<', '비즈니스석 여유가 있는']] };
   def('where_column_compare', T.cond, '중급', '작성', c => !!PAIRS[c.table], c => {
     const [a, b, op, ko] = c.r.pick(PAIRS[c.table]), cols = ['CARRID', 'CONNID', a, b];
-    return { name: `열끼리 비교 (${ko} 항공편)`, cols, req: `${c.table}에서 ${ko} 운항 일정의 ${cols.join(', ')}를 조회하세요. 두 열을 서로 비교하는 조건이 필요합니다.`, answer: fmt({ cols, from: c.table, where: `${a} ${op} ${b}`, into: intoT(c) }), h2: '두 항목이 모두 DB 열이면 @를 붙이지 않습니다.', note: 'DB 열끼리 비교할 때는 @를 쓰지 않습니다. @는 ABAP 변수 전용입니다.', checks: baseChecks(c, cols, [K.re(`${a} ${op} ${b} 열 비교`, new RegExp(anyCol(a) + ' ' + rxEsc(op) + ' ' + anyCol(b))), K.no('DB 열에 @를 붙이지 않음', new RegExp('@(?:' + a + '|' + b + ')(?![A-Z0-9_])'))]) };
+    return { name: `열끼리 비교 (${ko} 항공편)`, cols, req: `${c.table}에서 ${ko} 운항 일정의 ${cols.join(', ')}를 조회하세요. 두 열을 서로 비교하는 조건이 필요합니다.`, answer: fmt({ cols, from: c.table, where: `${a} ${op} ${b}`, into: intoT(c) }), h2: '두 항목이 모두 DB 열이면 @를 붙이지 않습니다.', note: 'DB 열끼리 비교할 때는 @를 쓰지 않습니다. @는 ABAP 변수 전용입니다.', checks: baseChecks(c, cols, [K.re(`${a} ${op} ${b} 열 비교`, new RegExp(anyCol(a) + ' ' + rxEsc(op) + ' ' + anyCol(b))), K.sno('DB 열에 @를 붙이지 않음', new RegExp('@(?:' + a + '|' + b + ')(?![A-Z0-9_])'))]) };
   });
 
   def('where_date', T.cond, '중급', '작성', c => c.info && !!c.kindFields('date')[0], c => {
@@ -469,17 +561,17 @@
   /* ---------- 오류 수정 · 문법 변환 ---------- */
   def('fix_missing_at', T.syn, '기초', '오류 수정', okInfo, c => {
     const f = c.gf, cols = uniq([f, ...c.focused]), v = dv(c, c.table, f, 'AA');
-    return { name: '@ 빠진 호스트 변수 고치기', cols, bindings: { [`LV_${f}`]: v }, snippet: `SELECT ${cols.join(', ')}\n  FROM ${c.table}\n  WHERE ${f} = LV_${f}\n  INTO TABLE ${c.rv}.`, req: `위 코드는 열 목록에 쉼표를 썼으므로 새 Open SQL(엄격 모드) 규칙이 적용되어 구문 오류가 납니다. 올바르게 고쳐 쓰세요.`, answer: fmt({ cols, from: c.table, where: `${f} = @LV_${f}`, into: intoT(c) }), note: '쉼표 구분 열 목록을 쓰면 엄격 모드가 적용되어 ABAP 변수에는 반드시 @가 필요합니다.', checks: [K.sel, K.from(c.table), K.re(`WHERE ${f} = @LV_${f} (@ 사용)`, new RegExp(anyCol(f) + ' = @LV_' + f)), K.intoTable(c.rv)] };
+    return { name: '@ 빠진 호스트 변수 고치기', cols, bindings: { [`LV_${f}`]: v }, snippet: `SELECT ${cols.join(', ')}\n  FROM ${c.table}\n  WHERE ${f} = LV_${f}\n  INTO TABLE ${c.rv}.`, req: `위 코드는 열 목록에 쉼표를 썼으므로 새 Open SQL(엄격 모드) 규칙이 적용되어 구문 오류가 납니다. 올바르게 고쳐 쓰세요.`, answer: fmt({ cols, from: c.table, where: `${f} = @LV_${f}`, into: intoT(c) }), note: '쉼표 구분 열 목록을 쓰면 엄격 모드가 적용되어 ABAP 변수에는 반드시 @가 필요합니다.', checks: [K.sel, K.from(c.table), K.sre(`WHERE ${f} = @LV_${f} (@ 사용)`, new RegExp(anyCol(f) + ' = @LV_' + f)), K.intoTable(c.rv)] };
   });
 
   def('fix_comma', T.syn, '기초', '오류 수정', c => c.fields.length > 1, c => {
     const cols = uniq([c.gf, ...c.focused]).slice(0, 3), f = c.gf, v = dv(c, c.table, f, 'AA');
-    return { name: '쉼표 빠진 열 목록 고치기', cols, bindings: { [`LV_${f}`]: v }, snippet: `SELECT ${cols.join(' ')}\n  FROM ${c.table}\n  WHERE ${f} = @LV_${f}\n  INTO TABLE @${c.rv}.`, req: `위 코드는 @ 호스트 변수를 쓰면서 열 목록에 쉼표가 없어 구문 오류가 납니다. 올바르게 고쳐 쓰세요.`, answer: fmt({ cols, from: c.table, where: `${f} = @LV_${f}`, into: intoT(c) }), note: '@를 쓰는 새 문법에서는 열 목록을 쉼표로 구분해야 합니다.', checks: [K.sel, K.from(c.table), K.re('열 목록을 쉼표로 구분', /\bSELECT (?:SINGLE |DISTINCT )?(?:\w+~)?\w+ , (?:\w+~)?\w+/), K.cols(cols), K.intoTable(c.rv)] };
+    return { name: '쉼표 빠진 열 목록 고치기', cols, bindings: { [`LV_${f}`]: v }, snippet: `SELECT ${cols.join(' ')}\n  FROM ${c.table}\n  WHERE ${f} = @LV_${f}\n  INTO TABLE @${c.rv}.`, req: `위 코드는 @ 호스트 변수를 쓰면서 열 목록에 쉼표가 없어 구문 오류가 납니다. 올바르게 고쳐 쓰세요.`, answer: fmt({ cols, from: c.table, where: `${f} = @LV_${f}`, into: intoT(c) }), note: '@를 쓰는 새 문법에서는 열 목록을 쉼표로 구분해야 합니다.', checks: [K.sel, K.from(c.table), K.sre('열 목록을 쉼표로 구분', /\bSELECT (?:SINGLE |DISTINCT )?(?:\w+~)?\w+ , (?:\w+~)?\w+/), K.cols(cols), K.intoTable(c.rv)] };
   });
 
   def('fix_col_at', T.cond, '중급', '오류 수정', c => !!PAIRS[c.table], c => {
     const [a, b, op] = PAIRS[c.table][0], cols = ['CARRID', 'CONNID', a, b];
-    return { name: '열 비교에 붙은 @ 고치기', cols, snippet: `SELECT ${cols.join(', ')}\n  FROM ${c.table}\n  WHERE ${a} ${op} @${b}\n  INTO TABLE @${c.rv}.`, req: `위 코드는 DB 열 ${b}에 @를 붙여 ABAP 변수로 취급해 오류가 납니다. ${a}가 ${b}보다 작은 행을 조회하도록 고쳐 쓰세요.`, answer: fmt({ cols, from: c.table, where: `${a} ${op} ${b}`, into: intoT(c) }), checks: baseChecks(c, cols, [K.re(`${a} ${op} ${b} 열 비교`, new RegExp(anyCol(a) + ' ' + rxEsc(op) + ' ' + anyCol(b))), K.no('DB 열에 @를 붙이지 않음', new RegExp('@(?:' + a + '|' + b + ')(?![A-Z0-9_])'))]) };
+    return { name: '열 비교에 붙은 @ 고치기', cols, snippet: `SELECT ${cols.join(', ')}\n  FROM ${c.table}\n  WHERE ${a} ${op} @${b}\n  INTO TABLE @${c.rv}.`, req: `위 코드는 DB 열 ${b}에 @를 붙여 ABAP 변수로 취급해 오류가 납니다. ${a}가 ${b}보다 작은 행을 조회하도록 고쳐 쓰세요.`, answer: fmt({ cols, from: c.table, where: `${a} ${op} ${b}`, into: intoT(c) }), checks: baseChecks(c, cols, [K.re(`${a} ${op} ${b} 열 비교`, new RegExp(anyCol(a) + ' ' + rxEsc(op) + ' ' + anyCol(b))), K.sno('DB 열에 @를 붙이지 않음', new RegExp('@(?:' + a + '|' + b + ')(?![A-Z0-9_])'))]) };
   });
 
   def('fix_single_endselect', T.res, '기초', '오류 수정', okInfo, c => {
@@ -504,7 +596,7 @@
 
   def('old_to_new', T.syn, '중급', '문법 변환', okInfo, c => {
     const f = c.gf, cols = uniq([f, ...c.focused]).slice(0, 3), v = dv(c, c.table, f, 'AA');
-    return { name: '옛 문법을 새 Open SQL로 바꾸기', cols, bindings: { [`LV_${f}`]: v }, snippet: `SELECT ${cols.join(' ')}\n  FROM ${c.table}\n  INTO TABLE ${c.rv}\n  WHERE ${f} = LV_${f}.`, req: `위 클래식 문법의 SELECT를 7.4 이상 새 Open SQL(쉼표 구분 열 목록, @ 호스트 변수, INTO를 마지막에)로 바꿔 쓰세요.`, answer: fmt({ cols, from: c.table, where: `${f} = @LV_${f}`, into: intoT(c) }), note: '새 문법: ① 열은 쉼표로 구분 ② ABAP 변수는 @ ③ INTO는 마지막 절.', checks: [K.sel, K.from(c.table), K.re('열 목록을 쉼표로 구분', /\bSELECT (?:SINGLE |DISTINCT )?(?:\w+~)?\w+ , (?:\w+~)?\w+/), K.cols(cols), K.re(`WHERE ${f} = @LV_${f} (@ 사용)`, new RegExp(anyCol(f) + ' = @LV_' + f)), K.intoTable(c.rv), K.re('INTO를 WHERE 뒤 마지막에 배치', /\bWHERE\b.*\bINTO\b/)] };
+    return { name: '옛 문법을 새 Open SQL로 바꾸기', cols, bindings: { [`LV_${f}`]: v }, snippet: `SELECT ${cols.join(' ')}\n  FROM ${c.table}\n  INTO TABLE ${c.rv}\n  WHERE ${f} = LV_${f}.`, req: `위 클래식 문법의 SELECT를 7.4 이상 새 Open SQL(쉼표 구분 열 목록, @ 호스트 변수, INTO를 마지막에)로 바꿔 쓰세요.`, answer: fmt({ cols, from: c.table, where: `${f} = @LV_${f}`, into: intoT(c) }), note: '새 문법: ① 열은 쉼표로 구분 ② ABAP 변수는 @ ③ INTO는 마지막 절.', checks: [K.sel, K.from(c.table), K.sre('열 목록을 쉼표로 구분', /\bSELECT (?:SINGLE |DISTINCT )?(?:\w+~)?\w+ , (?:\w+~)?\w+/), K.cols(cols), K.sre(`WHERE ${f} = @LV_${f} (@ 사용)`, new RegExp(anyCol(f) + ' = @LV_' + f)), K.intoTable(c.rv), K.re('INTO를 WHERE 뒤 마지막에 배치', /\bWHERE\b.*\bINTO\b/)] };
   });
 
   /* ---------- 결과 예측 ---------- */
@@ -707,11 +799,12 @@
     return colKo(item);
   }
 
-  function describeInto(body, single, aggOnly) {
+  function describeInto(body, single, aggOnly, classic) {
     const b = flatSql(body);
     const inline = b.match(/@DATA\(\s*(\w+)\s*\)/i), plain = b.match(/@(\w+)\s*$/);
     if (/^CORRESPONDING FIELDS OF TABLE/i.test(b)) return { v: `내부 테이블 @${(plain || [, '?'])[1]}에 받기 — 열 이름이 같은 필드끼리 맞춰 채움`, why: '내부 테이블은 프로그램에 이미 선언돼 있어야 합니다.' };
     if (/^APPENDING/i.test(b)) return { v: `내부 테이블 @${(plain || [, '?'])[1]}의 기존 내용 뒤에 이어 붙이기` };
+    if (classic && inline) return { v: `${/^TABLE/i.test(b) ? '내부 테이블' : single ? '한 건을 구조' : aggOnly ? '집계 결과 한 줄을 변수/구조' : '한 행을 구조'} ${inline[1]}에 받기 (프로그램에 미리 선언된 변수라고 가정)` };
     if (/^TABLE/i.test(b)) return inline ? { v: `내부 테이블 ${inline[1]}에 받기 — @DATA(${inline[1]})로 즉석 선언`, why: '미리 DATA 선언을 하지 않아도 SELECT 결과 구조에 맞는 테이블이 만들어집니다.' } : { v: `내부 테이블 @${(plain || [, '?'])[1]}에 받기`, why: '여러 행을 한 번에 담는 곳이라 INTO TABLE을 씁니다.' };
     if (inline) return { v: `${single ? '한 건' : aggOnly ? '집계 결과 한 줄' : '한 행'}을 구조/변수 ${inline[1]}에 받기 — @DATA(${inline[1]})로 즉석 선언`, why: single ? 'SELECT SINGLE은 결과가 한 건이라 내부 테이블(TABLE)이 아니라 구조에 바로 받습니다.' : '' };
     return { v: `변수 @${(plain || [, '?'])[1]}에 받기` };
@@ -748,7 +841,7 @@
     if (bodies.HAVING) splitTop(bodies.HAVING, 'AND').forEach(pt => { const d = describePred(pt, env); list.push({ k: '그룹 조건', v: d.v, why: d.why }); });
     if (bodies['ORDER BY']) { const ob = bodies['ORDER BY']; list.push({ k: '정렬', v: /^PRIMARY KEY$/i.test(ob) ? '테이블의 기본 키 순서로 정렬' : splitComma(ob).map(x => { const mm = x.match(/^(.+?)(?:\s+(ASCENDING|ASC|DESCENDING|DESC))?$/i); return `${colKo(mm[1])} ${/^DESC/i.test(mm[2] || '') ? '내림차순(큰 값부터)' : '오름차순(작은 값부터)'}`; }).join(', ') + ' 정렬' }); }
     const up = flat.match(/\bUP\s+TO\s+(\d+)\s+ROWS\b/i); if (up) list.push({ k: '건수 제한', v: `앞에서 ${up[1]}건까지만 읽기` });
-    if (bodies.INTO) { const d = describeInto(bodies.INTO, single, aggOnly); list.push({ k: '결과 받기', v: d.v, why: d.why }); }
+    if (bodies.INTO) { const d = describeInto(bodies.INTO, single, aggOnly, env.classic); list.push({ k: '결과 받기', v: d.v, why: d.why }); }
     const pre = flat.replace(/\bINTO\b[\s\S]*?(?=\bUP\s+TO\b|$)/i, ' ');
     [...new Set((pre.match(/@([A-Za-z_][\w-]*)/g) || []).map(x => x.slice(1)).filter(x => !/^DATA\b/i.test(x)))].forEach(n => {
       const bound = env.bindings[n.toUpperCase()], decl = declOf(env.c.project.source, n.replace(/-.*/, ''));
@@ -818,19 +911,20 @@
   }
 
   /* ================= 4. 공개 API ================= */
-  function build(project, seed, variant = 'projection') {
-    const c = ctxOf(project, seed);
+  function build(project, seed, variant = 'projection', opts) {
+    const c = ctxOf(project, seed, opts && opts.syntax);
     const m = String(variant).match(/^source_(query|blank)_(\d+)$/);
     if (m) return sourceProblem(c, m[1], Number(m[2]), variant);
     const d = REG[variant] || REG.projection;
     return finalize(c, d.make(c), d, REG[variant] ? variant : 'projection');
   }
-  function variants(project) {
-    const c = ctxOf(project, '00000000');
+  function variants(project, opts) {
+    const classic = !!opts && opts.syntax === 'classic', c = ctxOf(project, '00000000', classic ? 'classic' : 'new');
     // Keep the practice pool focused on answers that execute as one Open SQL SELECT.
     const ids = ORDER.filter(id => {
       try {
         if (!REG[id].ok(c)) return false;
+        if (classic && NEW_ONLY.has(id)) return false;
         const spec = REG[id].make(c);
         return !!window.openSqlRunner && window.openSqlRunner.run(spec.answer, {
           data: DB(),
@@ -839,7 +933,7 @@
         }).ok;
       } catch (e) { return false; }
     });
-    sourceQueries(project.source).forEach((q, i) => { ids.push('source_query_' + i); if (hideable(q).length) ids.push('source_blank_' + i); });
+    sourceQueries(project.source).forEach((q, i) => { if (classic && NEW_ONLY_SQL.test(q)) return; ids.push('source_query_' + i); if (hideable(q).length) ids.push('source_blank_' + i); });
     return ids;
   }
   function meta(project, variant) {
